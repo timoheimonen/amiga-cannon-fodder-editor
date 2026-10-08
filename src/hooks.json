@@ -1,0 +1,489 @@
+{
+  "schema": 1,
+  "image": "FODDERC",
+  "input_bytes": 182804,
+  "input_sha256": "446ef9543addcff3a20af789543d4f039e4e23f7c0175ecee3df6d60572010fc",
+  "protected": [
+    {
+      "name": "fairlight_load_save_fix",
+      "address": "FODDERS_FAIRLIGHT_FIX",
+      "bytes": 4,
+      "expected_sha256": "0858bde151f9f5cf901f1e0296497224e750ae637fa4c0f8e517bf2a95774830"
+    }
+  ],
+  "hooks": [
+    {
+      "name": "main_entry",
+      "address": "FODDERS_BASE",
+      "opcode": "jmp",
+      "target": "editor_bootstrap",
+      "resume": "FODDERS_INIT",
+      "bytes": 6,
+      "expected_sha256": "9b687202c859e1be7801c4c3614e7950603aee09ae307f0e3c578e63687c2243"
+    },
+    {
+      "name": "directory_cache_record_limit",
+      "address": "main_directory_limit",
+      "opcode": "raw",
+      "replacement": "363c0096",
+      "resume": "main_directory_limit_next",
+      "bytes": 4,
+      "expected_sha256": "2bf9593ed0b6c1d59fc63c8d9137c225ba7888deaf5a7777c3acc5ec3c87ac50"
+    },
+    {
+      "name": "native_track_read_integrity",
+      "address": "sensi_checked_read_hook",
+      "opcode": "jmp",
+      "target": "editor_native_read_checked",
+      "resume": "sensi_checked_read_next",
+      "bytes": 6,
+      "expected_sha256": "28849271ee3e56fdfec21e1dd56f9caceff13c18924a2f3075264e86433f77db"
+    },
+    {
+      "name": "audio_init_keep_disabled",
+      "address": "fodders_audio_init_enable",
+      "opcode": "raw",
+      "replacement": "33fc0000000a3c5e",
+      "resume": "fodders_audio_init_next",
+      "bytes": 8,
+      "expected_sha256": "6f4ea5d1767fec15afa4b9af817844983e60b96e7399aa48810dd9464e16406b"
+    },
+    {
+      "name": "audio_init_publish_complete_state",
+      "address": "fodders_audio_init_return",
+      "opcode": "jmp",
+      "target": "editor_audio_publish",
+      "resume": "fodders_audio_init_end",
+      "bytes": 6,
+      "expected_sha256": "7f09b538ef863cae65b4a16e1301251bde1fed37c1dba591dd4ec9f4b34106b1"
+    },
+    {
+      "name": "editor_key_store",
+      "address": "keyboard_store_hook",
+      "opcode": "jsr",
+      "target": "editor_key_store",
+      "resume": "keyboard_store_next",
+      "bytes": 6,
+      "expected_sha256": "2e28c8dd178292afd2652a5476a2d0689c4a1f87c268b71b318b420e13ea849e"
+    },
+    {
+      "name": "editor_key_event_hold",
+      "address": "keyboard_event_hook",
+      "opcode": "jmp",
+      "padding": "nop",
+      "target": "editor_key_event",
+      "resume": "keyboard_event_end",
+      "bytes": 30,
+      "expected_sha256": "fe22b74d423455e4f3c658d1a1bea7b2aee6b2eeb07d1c30ab0d57e7faf0b6e7"
+    },
+    {
+      "name": "bounded_disk_markers",
+      "address": "sensi_load_file_hook",
+      "opcode": "jmp",
+      "target": "editor_marker_gate",
+      "resume": "sensi_load_file_continue",
+      "bytes": 6,
+      "expected_sha256": "7dffad012b11c908dd1b18671946c520b4828373768edfdca14cee8a6ba7a04d"
+    },
+    {
+      "name": "campaign_mode_gate",
+      "address": "campaign_gate_hook",
+      "opcode": "jmp",
+      "target": "editor_campaign_gate",
+      "resume": "campaign_gate_continue",
+      "bytes": 6,
+      "expected_sha256": "9051b7a676e4a8d8b884bf319d2de8857d9dd90df73fab95de06258f31f6f40c"
+    },
+    {
+      "name": "campaign_listing_and_controller",
+      "address": "campaign_list_hook",
+      "opcode": "component",
+      "component": "campaign_listing",
+      "resume": "campaign_list_continue",
+      "bytes": 102,
+      "expected_sha256": "26632be4883856f5cf58b87b783917a05707c31fd15319125a9feb6bbf51fad2"
+    },
+    {
+      "name": "campaign_snapshot_load",
+      "address": "campaign_load_hook",
+      "opcode": "jmp",
+      "target": "editor_campaign_load",
+      "resume": "campaign_cleanup_hook",
+      "bytes": 6,
+      "expected_sha256": "99988043492ad21a3409953ff674d67233e778f04a9a22724438bb5e5fa00865"
+    },
+    {
+      "name": "campaign_modal_close",
+      "address": "campaign_cleanup_hook",
+      "opcode": "jmp",
+      "target": "editor_campaign_close",
+      "resume": "campaign_modal_return",
+      "padding": "nop",
+      "bytes": 8,
+      "expected_sha256": "327669b63497d2cdff0258003c16d3dea3afd3eec4bc9472c562af644e7720d2"
+    },
+    {
+      "name": "custom_recruit_rank",
+      "address": "policy_rank_hook",
+      "opcode": "jmp",
+      "target": "policy_rank",
+      "resume": "native_rank_resume",
+      "bytes": 6,
+      "expected_sha256": "cccd4a3bff34d86a08155a0ab0f6ebfef42e5b3dfd80fa7cdb4752eba6dac701"
+    },
+    {
+      "name": "custom_ammunition",
+      "address": "policy_ammunition_hook",
+      "opcode": "jsr",
+      "target": "policy_ammunition",
+      "resume": "native_ammunition_next",
+      "bytes": 6,
+      "expected_sha256": "2102675724ed4f287d0ab9ba25aa3b5cc404dce73a4e617375324cd7535e0688"
+    },
+    {
+      "name": "custom_aggression",
+      "address": "policy_aggression_hook",
+      "opcode": "jsr",
+      "target": "policy_aggression",
+      "resume": "native_aggression_next",
+      "bytes": 6,
+      "expected_sha256": "059c0d237fae5e0182e0b7d8ceac1d259a8a405e6a67a7e15f94f2dbb089a4ad"
+    },
+    {
+      "name": "custom_gameplay_objectives",
+      "address": "policy_objectives_hook",
+      "opcode": "jsr",
+      "target": "policy_objectives",
+      "resume": "native_objectives_next",
+      "bytes": 6,
+      "expected_sha256": "8c68ff47af2a9e3550654e5503673bc0c81bd3261e0de9e427864e676208897d"
+    },
+    {
+      "name": "custom_briefing_objectives",
+      "address": "policy_briefing_objectives_hook",
+      "opcode": "jsr",
+      "target": "policy_objectives",
+      "resume": "native_briefing_objectives_next",
+      "bytes": 6,
+      "expected_sha256": "8c68ff47af2a9e3550654e5503673bc0c81bd3261e0de9e427864e676208897d"
+    },
+    {
+      "name": "custom_enemy_grenades",
+      "address": "policy_enemy_grenades_hook",
+      "opcode": "jmp",
+      "target": "policy_enemy_grenades",
+      "resume": "native_grenade_branch",
+      "padding": "nop",
+      "bytes": 8,
+      "expected_sha256": "7be379fc34267b74e37ca8043d7fd0671fafd48183d6cb9034fc205dff07aad3"
+    },
+    {
+      "name": "custom_overview",
+      "address": "policy_overview_hook",
+      "opcode": "jsr",
+      "target": "policy_overview",
+      "resume": "native_overview_branch",
+      "padding": "nop",
+      "bytes": 8,
+      "expected_sha256": "094ade7f9a794a759492b1f97d71ad06cf8828241b8a520a72113475c56f49ed"
+    },
+    {
+      "name": "custom_countdown",
+      "address": "policy_countdown_hook",
+      "opcode": "jsr",
+      "target": "policy_countdown",
+      "resume": "native_countdown_branch",
+      "padding": "nop",
+      "bytes": 8,
+      "expected_sha256": "094ade7f9a794a759492b1f97d71ad06cf8828241b8a520a72113475c56f49ed"
+    },
+    {
+      "name": "custom_countdown_failure",
+      "address": "policy_countdown_failure_hook",
+      "opcode": "jsr",
+      "target": "policy_countdown_failure",
+      "resume": "native_failure_branch",
+      "padding": "nop",
+      "bytes": 8,
+      "expected_sha256": "094ade7f9a794a759492b1f97d71ad06cf8828241b8a520a72113475c56f49ed"
+    },
+    {
+      "name": "custom_countdown_setup",
+      "address": "policy_countdown_setup_hook",
+      "opcode": "jsr",
+      "target": "policy_countdown_setup",
+      "resume": "native_countdown_setup_next",
+      "bytes": 6,
+      "expected_sha256": "109d5d68316d2b8e7c795075adf17b96088d3c9064bf40975bd0523a51cfeb31"
+    },
+    {
+      "name": "custom_title_heading",
+      "address": "policy_title_heading_hook",
+      "opcode": "jmp",
+      "target": "policy_title_heading",
+      "resume": "native_title_heading_resume",
+      "padding": "nop",
+      "bytes": 10,
+      "expected_sha256": "5dea59e09db8c1202e2306cefeab224a07ee28b5b22593af3f11e6a8210df75b"
+    },
+    {
+      "name": "custom_title_measure",
+      "address": "policy_title_measure_hook",
+      "opcode": "jmp",
+      "target": "policy_title_measure",
+      "resume": "native_title_measure",
+      "padding": "nop",
+      "bytes": 10,
+      "expected_sha256": "0b7b21d7cd72b79417ef0015d4f9164d4d7715af6aabb8129958be8e09b2fd9e"
+    },
+    {
+      "name": "custom_title_draw",
+      "address": "policy_title_draw_hook",
+      "opcode": "jmp",
+      "target": "policy_title_draw",
+      "resume": "native_title_draw",
+      "padding": "nop",
+      "bytes": 8,
+      "expected_sha256": "be0bdd35fcf3f8d0c351e8ccbf2b256ce5166e631118333469e24f2b95b0d5c0"
+    },
+    {
+      "name": "custom_map_full",
+      "address": "session_map_full_hook",
+      "opcode": "jmp",
+      "target": "session_map_full",
+      "resume": "native_map_full_resume",
+      "padding": "nop",
+      "bytes": 10,
+      "expected_sha256": "1cd6805374dd7e11f3616c126c879700337814cfeeefde720bc255d7b1066a12"
+    },
+    {
+      "name": "custom_map_reload",
+      "address": "session_map_reload_hook",
+      "opcode": "jmp",
+      "target": "session_map_reload",
+      "resume": "native_map_reload_resume",
+      "padding": "nop",
+      "bytes": 10,
+      "expected_sha256": "1df01674ae4de498c653be4f5f2a506d1565da8fe612a8a9e75f01482465a10a"
+    },
+    {
+      "name": "custom_spt",
+      "address": "session_spt_hook",
+      "opcode": "jmp",
+      "target": "session_spt",
+      "resume": "native_spt_resume",
+      "padding": "nop",
+      "bytes": 10,
+      "expected_sha256": "2d0eb2e7957d1dddde37bf488aef8313bab10f8d0c7da9979e718f58d9138850"
+    },
+    {
+      "name": "custom_outcome",
+      "address": "session_outcome_hook",
+      "opcode": "jmp",
+      "target": "session_outcome",
+      "resume": "native_outcome_zero",
+      "padding": "nop",
+      "bytes": 8,
+      "expected_sha256": "b3df2c70f1600ab68334736307d63d932153eb151a301cc0c4c12e5ab51ca1b0"
+    },
+    {
+      "name": "custom_after_hill",
+      "address": "session_after_hill_hook",
+      "opcode": "jmp",
+      "target": "session_after_hill",
+      "resume": "native_after_dialog",
+      "bytes": 6,
+      "expected_sha256": "ca6b356315aeb4b2ce0cf9afef46d1a09235f641e812f95d0ca84e6824bd6af8"
+    },
+    {
+      "name": "campaign_return_before_hill",
+      "address": "session_before_hill_hook",
+      "opcode": "jsr",
+      "target": "session_before_hill",
+      "resume": "session_after_hill_hook",
+      "bytes": 6,
+      "expected_sha256": "d0ae4e275604ead6c132fe0372d329e29b5f90370471b1164983999fc0ab48ec"
+    },
+    {
+      "name": "campaign_return_history",
+      "address": "session_hill_history_hook",
+      "opcode": "jmp",
+      "target": "session_hill_history",
+      "resume": "native_hill_history_next",
+      "padding": "nop",
+      "bytes": 8,
+      "expected_sha256": "65825dc78f44c9cd65b81096ab36cf106a4a5bde1d9f7a9b2f0c38b86810e24c"
+    },
+    {
+      "name": "hill_editor_actions",
+      "address": "FODDERS_RECRUITMENT_CLICK",
+      "opcode": "jmp",
+      "target": "editor_hill_click",
+      "resume": "native_click_continue",
+      "bytes": 6,
+      "expected_sha256": "6042d401569c2854737af49f78d36f2663312bee1a712afc0c6c4c093edd4d2a"
+    },
+    {
+      "name": "hill_labels_and_font",
+      "address": "native_hill_body",
+      "opcode": "component",
+      "component": "hill_body",
+      "resume": "native_hill_body_end",
+      "bytes": 192,
+      "expected_sha256": "b3cd7a26ff3fd6c147c0e8e3c83d4199e58f6a9f90f4ae2d15877d7d570b77be"
+    },
+    {
+      "name": "custom_desert_base_attributes",
+      "address": "native_base_attributes",
+      "opcode": "component",
+      "component": "base_attributes",
+      "resume": "native_base_attributes_end",
+      "bytes": 156,
+      "expected_sha256": "7ca330a725eb14c8b187deddd6d2865294637b6f65890bbef1db17a01d4d60fd"
+    },
+    {
+      "name": "shared_resource_loaders",
+      "address": "native_resource_raw",
+      "opcode": "component",
+      "component": "resource_loaders",
+      "resume": "native_resource_loaders_end",
+      "bytes": 226,
+      "expected_sha256": "6bd7ba4a41723136b1f74aa15a2cb715606acb764a62a8fe9bae40bc986e6db0"
+    }
+  ],
+  "host": [
+    {
+      "offset": 0,
+      "bytes": 6,
+      "expected_sha256": "9b687202c859e1be7801c4c3614e7950603aee09ae307f0e3c578e63687c2243",
+      "replacement": "4ef9000ada00",
+      "purpose": "Enter the editor resident before hardware setup"
+    },
+    {
+      "offset": 24124,
+      "bytes": 4,
+      "expected_sha256": "2bf9593ed0b6c1d59fc63c8d9137c225ba7888deaf5a7777c3acc5ec3c87ac50",
+      "replacement": "363c0096",
+      "purpose": "Limit directory cache to 150 records"
+    },
+    {
+      "offset": 50444,
+      "bytes": 2,
+      "expected_sha256": "cfefeeb1082c164a5271aa99288f81553c99aafa6bdd5b1d261d046c43f67997",
+      "replacement": "4e75",
+      "purpose": "Ignore physical media-change input"
+    },
+    {
+      "offset": 50500,
+      "bytes": 2,
+      "expected_sha256": "cfefeeb1082c164a5271aa99288f81553c99aafa6bdd5b1d261d046c43f67997",
+      "replacement": "4e75",
+      "purpose": "Ignore physical disk-present input"
+    },
+    {
+      "offset": 50524,
+      "bytes": 2,
+      "expected_sha256": "0c901082cb627e015612e7274a8f1429abdd17f1e37f466651d3f0315e2dbd7e",
+      "replacement": "4e75",
+      "purpose": "Disable physical motor selection"
+    },
+    {
+      "offset": 50624,
+      "bytes": 2,
+      "expected_sha256": "36bf72c2263a5413a551e6059da5b47ca466fdcb3f7a549758adf2928baa2ef6",
+      "replacement": "4e75",
+      "purpose": "Disable physical motor release"
+    },
+    {
+      "offset": 49942,
+      "bytes": 2,
+      "expected_sha256": "d19922d19861da8c3720cdd1bd558a20c800b499c13fb847692a1cf63d729d45",
+      "replacement": "4e75",
+      "purpose": "Disable disk timer setup"
+    },
+    {
+      "offset": 50054,
+      "bytes": 10,
+      "expected_sha256": "677aa14b76188301863fd8f139703c88fc524ebcf96c10b6d94435018823a1d9",
+      "replacement": "33c00008c3d64e754e71",
+      "purpose": "Replace physical seek"
+    },
+    {
+      "offset": 46348,
+      "bytes": 4,
+      "expected_sha256": "f027b165b06254e947632fd0e5c3a8b8480d82de39d451a5b6140f0c69e7cc91",
+      "replacement": "70054e75",
+      "purpose": "Reject raw track writes"
+    },
+    {
+      "offset": 42770,
+      "bytes": 24,
+      "expected_sha256": "6187d7c03aeb7dc1da7c013e10ccb55ccc378581a906ec3a72894f51557d3834",
+      "replacement": "23fc457348290008279223fc66a5ecf40008278e4e714e71",
+      "purpose": "Store the Copylock results instead of running it"
+    },
+    {
+      "offset": 42806,
+      "bytes": 4,
+      "expected_sha256": "2bf9593ed0b6c1d59fc63c8d9137c225ba7888deaf5a7777c3acc5ec3c87ac50",
+      "replacement": "363c0096",
+      "purpose": "Keep the 150-record directory cache limit"
+    },
+    {
+      "offset": 31430,
+      "bytes": 4,
+      "expected_sha256": "00b292cc213866fea01e5ed4404427ad76ee5dc60af97a409ace941ddc4feb6d",
+      "replacement": "70004e71",
+      "purpose": "Replace direct CACR read"
+    },
+    {
+      "offset": 31442,
+      "bytes": 4,
+      "expected_sha256": "ac2f00bf67b07e4bec608b3c35955f4d21d8a6dd4c19b8e258832b468b9fd0e6",
+      "replacement": "4e714e71",
+      "purpose": "Remove direct CACR write"
+    },
+    {
+      "offset": 42990,
+      "bytes": 4,
+      "expected_sha256": "00b292cc213866fea01e5ed4404427ad76ee5dc60af97a409ace941ddc4feb6d",
+      "replacement": "70004e71",
+      "purpose": "Replace direct CACR read"
+    },
+    {
+      "offset": 43002,
+      "bytes": 4,
+      "expected_sha256": "ac2f00bf67b07e4bec608b3c35955f4d21d8a6dd4c19b8e258832b468b9fd0e6",
+      "replacement": "4e714e71",
+      "purpose": "Remove direct CACR write"
+    },
+    {
+      "offset": 130472,
+      "bytes": 4,
+      "expected_sha256": "00b292cc213866fea01e5ed4404427ad76ee5dc60af97a409ace941ddc4feb6d",
+      "replacement": "70004e71",
+      "purpose": "Replace direct CACR read"
+    },
+    {
+      "offset": 130484,
+      "bytes": 4,
+      "expected_sha256": "ac2f00bf67b07e4bec608b3c35955f4d21d8a6dd4c19b8e258832b468b9fd0e6",
+      "replacement": "4e714e71",
+      "purpose": "Remove direct CACR write"
+    },
+    {
+      "offset": 180570,
+      "bytes": 4,
+      "expected_sha256": "00b292cc213866fea01e5ed4404427ad76ee5dc60af97a409ace941ddc4feb6d",
+      "replacement": "70004e71",
+      "purpose": "Replace direct CACR read"
+    },
+    {
+      "offset": 180582,
+      "bytes": 4,
+      "expected_sha256": "ac2f00bf67b07e4bec608b3c35955f4d21d8a6dd4c19b8e258832b468b9fd0e6",
+      "replacement": "4e714e71",
+      "purpose": "Remove direct CACR write"
+    }
+  ]
+}

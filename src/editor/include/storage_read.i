@@ -1,0 +1,42 @@
+; Cannon Fodder In-Game Level Editor V1.0
+; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
+; Licensed under the MIT License. See the LICENSE file for details.
+
+STORAGE_READ_NAME            equ 0
+STORAGE_READ_DISK_ID         equ 16
+STORAGE_READ_EXPECTED_BYTES  equ 32
+STORAGE_READ_CAPACITY        equ 36
+STORAGE_READ_EXPECTED_CRC    equ 40
+STORAGE_READ_FLAGS           equ 44
+STORAGE_READ_RESERVED        equ 46
+STORAGE_READ_RESULT_BYTES    equ 48
+STORAGE_READ_RESULT_CRC      equ 52
+STORAGE_READ_RESULT_ID       equ 56
+STORAGE_READ_READY           equ 72
+STORAGE_READ_CANCEL          equ 76
+STORAGE_READ_CONTEXT_BYTES   equ 80
+STORAGE_READ_CHECK_CRC       equ 1
+STORAGE_READ_INVALID         equ 10
+STORAGE_READ_MEDIA           equ 11
+STORAGE_READ_CORRUPT         equ 12
+STORAGE_READ_VERIFY          equ 13
+STORAGE_READ_CANCELLED       equ 14
+STORAGE_READ_SIZE            equ 15
+STORAGE_READ_WORK_BYTES      equ 864
+STORAGE_READ_CANDIDATE_OFFSET equ 1032
+STORAGE_READ_CANDIDATE_BYTES equ 256
+
+; Backend operation 12: reflected IEEE CRC32 of D1.l (nonzero) bytes at A0,
+; returned in D0. A0 ends after the bytes; D1-D3 are clobbered.
+CRC_OPERATION                equ 12
+
+STORAGE_INSPECT_MAGIC        equ $43465349
+STORAGE_INSPECT_VERSION      equ 1
+STORAGE_INSPECT_BYTES        equ 80
+STORAGE_INSPECT_DISK_ID      equ 8
+STORAGE_INSPECT_NAME         equ 24
+STORAGE_INSPECT_FREE_BYTES   equ 56
+STORAGE_INSPECT_FREE_RECORDS equ 60
+STORAGE_INSPECT_RECORDS      equ 62
+STORAGE_INSPECT_DIRECTORY_CRC equ 64
+STORAGE_INSPECT_RESERVED     equ 68
