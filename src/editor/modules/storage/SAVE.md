@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -130,6 +130,12 @@ buffers during the call, and only CANCEL may change.
 
 Every file creation is verified by the file service itself (see
 [WRITE.md](WRITE.md)). MAP, SPT and undo remain untouched on success and failure.
+
+From step 1 to the first file write a dialog of the Slave's dialog service,
+`Saving the mission` (`progress.s`), names the mission and says that the
+screen stays dark while WHDLoad writes the files. It stays at least 25 fields
+and closes before the first write and on every exit: WHDLoad keeps the display
+dark during each write, and between writes the panel would only flash.
 
 Only zero status with a fresh READY of one permits clearing the caller's dirty
 state. Stage, byte counts and file counts alone are not commitment. The CFMI

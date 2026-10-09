@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -87,10 +87,11 @@ unsaved guard before dispatch; a requested Save must finish verification first.
 `dialog.s` shows the picker as a dialog of the Slave's dialog service (see
 [dialog](../dialog/README.md)): the game's own mission titles in a list of
 eight rows, then the phases of the chosen mission, with Previous, Next, Use and
-Back. Escape returns from phases to missions, then cancels. The original files
-are read by trying logical drives 0 to 3 in turn. If none supplies them, a
-"Game disk needed" dialog names disk 2 or 3, offers DF0 to DF3 and permits
-Retry or Cancel.
+Back. Previous and Next turn a page, the cursor keys step one row and wrap,
+and the heading line shows the position. Escape returns from phases to
+missions, then cancels. The original files are read by trying logical drives 0
+to 3 in turn. If none supplies them, a "Game disk could not be read" dialog
+names `Disk.2` or `Disk.3` of the WHDLoad install and permits Retry or Cancel.
 
 The current draft remains authoritative while the helper stages and validates
 its replacement. The final 4,992 bytes of the serializer partition hold packed

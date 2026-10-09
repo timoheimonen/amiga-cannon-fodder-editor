@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -37,14 +37,19 @@ UI_LAST_COMMAND     equ 8
 UI_LEFT             equ 0
 UI_CENTER           equ 1
 UI_RIGHT            equ 2
+UI_LEFT_CLIPPED     equ 3   ; left, cut after the last glyph that fits
 
-; Button states.
+; Button states. A button label may mark its key with an underscore before
+; the letter ("_Save"): the letter is underlined and the underscore is not
+; drawn. List rows draw their labels as they are.
 UI_NORMAL           equ 0
 UI_HOVER            equ 1
 UI_ACTIVE           equ 2
 UI_DISABLED         equ 3
 UI_DEFAULT          equ 4
 UI_DEFAULT_HOVER    equ 5
+UI_DEFAULT_ACTIVE   equ 6   ; selected or held down, and framed
+UI_KEY_MARK         equ '_'
 
 ; Colour roles.
 UI_BG               equ 0

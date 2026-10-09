@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -20,7 +20,7 @@ menu_new:
         bsr edtr_modal
         tst.w d0
         bmi menu_fail
-        beq menu_again
+        beq menu_cancel
         cmpi.w #EDTR_CHOICE_DISCARD,d0
         beq.s menu_new_picker
         bsr menu_release_request
@@ -37,7 +37,7 @@ menu_new_picker:
         bsr edtr_modal
         tst.w d0
         bmi menu_fail
-        beq menu_again
+        beq menu_cancel
         ; The bitmap snapshot is released before READBACK becomes MAP staging.
         bsr menu_owner
         bne menu_fail

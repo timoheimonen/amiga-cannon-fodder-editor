@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -21,6 +21,8 @@ LIVE_FILES_PAGE equ AUR_PAGE_FILES
 AUR_VALIDATE_ONLY equ 1
 LF_MODE equ EDITOR_UI_BASE
 LF_STATUS equ EDITOR_UI_BASE+2
+; The manifest name of the mission selected in Open, until it is found.
+LF_START equ EDITOR_UI_BASE+4
 LF_TITLE equ EDITOR_UI_BASE+32
 LF_TEXT equ EDITOR_UI_BASE+96
 
@@ -59,6 +61,12 @@ files_entry:
         move.l #$00010001,BROWSER_VERSION
         move.w d6,BROWSER_DATA_DRIVE
         clr.w LF_STATUS
+        lea SAVE_CONTEXT+4,a0
+        lea LF_START,a1
+        moveq #3,d0
+.start:
+        move.l (a0)+,(a1)+
+        dbf d0,.start
 files_refresh:
         clr.w BROWSER_COUNT
         lea BROWSER_DISK_ID,a0
@@ -105,6 +113,7 @@ files_refresh:
         bsr browser_files_classify
         bne files_close_error
         bsr files_indices
+        bsr files_start
 files_select:
         clr.w LF_MODE
         tst.w BROWSER_COUNT
@@ -222,6 +231,33 @@ files_editor_request:
         dc.l EDTR_MODULE_ID,EDITOR_SERIALIZER_BYTES
 
 ; Catalog indices reference the immutable directory, never a discarded buffer.
+; The first list selects the mission that was selected in Open.
+files_start:
+        tst.b LF_START
+        beq.s .out
+        tst.w BROWSER_FILES_VIEW
+        bne.s .out
+        moveq #0,d7
+.view:
+        cmp.w BROWSER_COUNT,d7
+        bhs.s .done
+        move.w d7,d0
+        add.w d0,d0
+        lea BF_VIEW_INDICES,a0
+        move.w 0(a0,d0.w),d0
+        bsr bf_record
+        lea LF_START,a1
+        bsr bf_name_equal
+        beq.s .found
+        addq.w #1,d7
+        bra.s .view
+.found:
+        move.w d7,BROWSER_SELECTED
+.done:
+        clr.b LF_START
+.out:
+        rts
+
 files_indices:
         clr.w BROWSER_COUNT
         moveq #0,d6

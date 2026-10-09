@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -13,7 +13,8 @@ before dispatch.
 The dimension dialog limits the proposal to 19×15 or larger and at most 7,500
 cells. An unchanged size returns without clearing undo. Other changes require
 confirmation, including expansions with no removed objects. The removal list
-shows each logical owner's decimal type and world coordinates. Empty results
+shows each logical owner with the object palette's name of its type (the type
+in hexadecimal when the palette has no such root) and its cell. Empty results
 and malformed companion groups are refused without changing the draft.
 
 The dialogs (`dialog.s`) are three dialogs of the Slave's dialog service on one

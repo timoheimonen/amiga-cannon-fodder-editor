@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -240,6 +240,7 @@ fs_create:
         move.l FS_LENGTH,d0
         movea.l resload(pc),a2
         move.w #1,FS_ATTEMPTED
+        bsr fs_cache_forget
         bsr fs_audio_quiet
         jsr resload_SaveFile(a2)
         tst.l d1
@@ -309,6 +310,7 @@ fs_delete:
         lea FS_PATH,a0
         movea.l resload(pc),a2
         move.w #1,FS_ATTEMPTED
+        bsr fs_cache_forget
         bsr fs_audio_quiet
         jsr resload_DeleteFile(a2)
         tst.l d1
@@ -379,6 +381,7 @@ fs_return:
         beq.s .checked
         lea whd_directory_checked(pc),a0
         sf (a0)
+        bsr fs_cache_forget
 .checked:
         movem.l (sp)+,d1-d7/a0-a6
         tst.w d0
@@ -447,9 +450,16 @@ fs_load:
 
 ; Rebuild a zero-padded, sorted4800-byte directory. ListFiles names are treated
 ; as untrusted bounded bytes even after API success. API returnD1 is mandatory.
+; Within a session nothing but this service changes Custom, so a listing stays
+; valid until the service writes or deletes a file or an operation fails; until
+; then the remembered listing, count and fingerprint are reused. Without it
+; every read lists Custom and asks the size of every file twice.
 fs_directory:
         bsr fs_cancel
         bne .return
+        lea fs_cache_valid(pc),a0
+        tst.w (a0)
+        bne .cached
         lea fs_names(pc),a0
         move.w #599,d1
 .zero_names: clr.l (a0)+
@@ -523,13 +533,46 @@ fs_directory:
         bne.s .media
         cmpi.l #$49544F52,4(a4)
         bne.s .media
+        ; Remember the checked listing.
+        lea EDITOR_DIRECTORY_BASE,a0
+        lea fs_cache_records(pc),a1
+        bsr.s fs_cache_copy
+        lea fs_cache_valid(pc),a0
+        move.w #1,(a0)+
+        move.w FS_COUNT,(a0)+
+        move.l FS_CRC,(a0)
         moveq #0,d0
 .return: tst.w d0
         rts
+.cached:
+        lea fs_cache_records(pc),a0
+        lea EDITOR_DIRECTORY_BASE,a1
+        bsr.s fs_cache_copy
+        lea fs_cache_count(pc),a0
+        move.w (a0)+,FS_COUNT
+        move.l (a0),FS_CRC
+        moveq #0,d0
+        bra.s .return
 .media: moveq #11,d0
         bra.s .return
 .corrupt: moveq #12,d0
         bra.s .return
+
+; Copy the 4800-byte directory from A0 to A1. Clobbers D1/A0/A1.
+fs_cache_copy:
+        move.w #1199,d1
+.long:  move.l (a0)+,(a1)+
+        dbf d1,.long
+        rts
+
+; Forget the remembered listing: Custom is about to change, or an operation
+; failed. Preserves all registers.
+fs_cache_forget:
+        move.l a0,-(sp)
+        lea fs_cache_valid(pc),a0
+        clr.w (a0)
+        movea.l (sp)+,a0
+        rts
 
 fs_sort_crc:
         move.w FS_COUNT,d6
@@ -862,5 +905,10 @@ fs_campaign_name: dc.b "CFSDISK",0
         even
 fs_names: dcb.b 2400,0
 fs_names_end:
+; The remembered listing: valid flag, count, fingerprint and the records.
+fs_cache_valid: dc.w 0
+fs_cache_count: dc.w 0
+fs_cache_crc: dc.l 0
+fs_cache_records: dcb.b 4800,0
         cnop 0,4
 fs_crc_table: dcb.l 256,0

@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -67,6 +67,11 @@ See [READ.md](READ.md) for the listing rules, the marker format, the
 fingerprint and the quota.
 
 ## Generation Token
+
+A zero `SAVE_GENERATION` (a new mission or Save as) starts at the next block
+of 65,536 generations after the highest record whose name starts with eight
+hexadecimal digits; a Save passes its own generation + 1. File names sort by
+generation, so the lists keep missions in the order they were made.
 
 Starting at `SAVE_GENERATION`, the token is formatted as eight lowercase
 hexadecimal digits. If the case-folded first eight characters of any directory

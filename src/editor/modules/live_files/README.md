@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -26,7 +26,8 @@ grants permission; all initial-browser entry conditions remain unchanged in the
 default build.
 
 `files.s` installs this composition as `cf_files.mod` (FOPS). Live Open supplies
-only the request tag and the source selector (zero) by value. The installed
+the request tag, the source selector (zero) and the manifest name of its
+selected mission by value; the first list starts at that mission. The installed
 owner requires pending Files page 7; the standalone core retains its Open-page
 entry contract.
 `dialog.s` shows the service as a dialog of the Slave's dialog service (see
@@ -36,7 +37,8 @@ the title or generation and Up, Down, Delete..., Recover... and Back; the
 confirmation names the files and generations in red.
 
 Only a fresh click on Delete in the confirmation deletes. Return and Escape
-choose Cancel. The directory and identity checks run every frame while the
+choose Cancel; the delete guard takes Escape as its cancellation, which before
+any deletion the dialog turns into Cancel (or Back in the list). The directory and identity checks run every frame while the
 dialog is open, and again after it closed and before the first file is
 removed. "Files deleted" follows a completely verified deletion. A refusal to
 delete the open source says the files belong to the mission open in the

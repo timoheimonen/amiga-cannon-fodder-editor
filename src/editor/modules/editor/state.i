@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -11,7 +11,6 @@ EDTR_OPEN               equ 2
 EDTR_STATE_ERROR        equ -40
 EDTR_VISUAL_ERROR       equ -41
 EDTR_ASSET_UNPROVED     equ -42
-EDTR_MARKER_WARNING     equ -43
 EDTR_MARKER_LIMIT       equ -44
 OBJECT_EDIT_REFUSED      equ -45
 OBJECT_LAST_ITEM         equ -46
@@ -91,4 +90,28 @@ TERRAIN_SCROLL_DIR      equ EDITOR_UI_BASE+12
 TERRAIN_SCROLL_REPEAT   equ EDITOR_UI_BASE+14
 ; Nonzero once the pointer has been outside the scroll zones.
 TERRAIN_SCROLL_ARMED    equ EDITOR_UI_BASE+16
+; Nonzero after the Marker tool was chosen: the bar says what markers do.
+; Each change of the cursor cell counts it down; the first one may only bring
+; the cursor to the pointer.
+TERRAIN_MARKER_HINT     equ EDITOR_UI_BASE+18
 TERRAIN_UI_END          equ EDITOR_UI_BASE+80
+
+; The terrain stamp, in the resident's spare bytes: after a complete asset
+; load, the game's two terrain cache names and a checksum of the graphics and
+; attributes they stand for. An editor-internal reload keeps the caches while
+; both still match, so the game skips loading the same terrain again.
+TERRAIN_STAMP           equ EDITOR_SPARE_BASE
+TERRAIN_STAMP_TAG       equ $5445524E
+TERRAIN_STAMP_NAMES     equ TERRAIN_STAMP+4
+TERRAIN_STAMP_SUM       equ TERRAIN_STAMP+36
+TERRAIN_STAMP_BYTES     equ 40
+        ifgt TERRAIN_STAMP_BYTES-EDITOR_SPARE_BYTES
+        fail "Terrain stamp exceeds the spare bytes"
+        endif
+; Base and sub BLK graphics, the base palette and the base and sub SWP, BHT
+; and HIT tables: what the game skips when its caches match.
+TERRAIN_BLK             equ $3FBEA
+TERRAIN_BLK_LONGS       equ (240+159)*128/4
+TERRAIN_PALETTE         equ $C000A0
+TERRAIN_ATTRIBUTES      equ $C78A9A
+TERRAIN_ATTRIBUTE_WORDS equ ($C79D5C-$C78A9A)/2

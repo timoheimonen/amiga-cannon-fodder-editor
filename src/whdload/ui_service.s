@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -232,7 +232,10 @@ ui_button:
         cmpi.w #UI_DEFAULT_HOVER,d5
         beq.s .hover
         cmpi.w #UI_ACTIVE,d5
+        beq.s .select
+        cmpi.w #UI_DEFAULT_ACTIVE,d5
         bne.s .face
+.select:
         moveq #UI_SELECT,d0
         bra.s .face
 .hover:
@@ -286,7 +289,10 @@ ui_button:
         moveq #UI_DIM,d0
 .not_disabled:
         cmpi.w #UI_ACTIVE,22(sp)
+        beq.s .accent
+        cmpi.w #UI_DEFAULT_ACTIVE,22(sp)
         bne.s .ink
+.accent:
         moveq #UI_ACCENT,d0
 .ink:
         bsr ui_role
@@ -297,14 +303,11 @@ ui_button:
         subq.w #UI_GLYPH_ROWS,d2
         asr.w #1,d2
         add.w 10(sp),d2
-        moveq #UI_CENTER,d5
+        move.w #UI_CENTER|UI_KEYS,d5
         movea.l 32(sp),a2
         bsr.s ui_text_draw
         movem.l (sp)+,d0-d7/a2
         rts
-
-; Left-aligned text cut after the last glyph that fits its field.
-UI_LEFT_CLIPPED     equ 3
 
 ; Flat list row D1 X, D2 Y, D3 W, D6 H, D5 state, A2 label: panel, hover or
 ; selection background, the label left-aligned four pixels in. Preserves all.
@@ -343,16 +346,30 @@ ui_row:
         movem.l (sp)+,d0-d7/a2
         rts
 
+; Button labels: an underscore underlines the next glyph and is not drawn.
+UI_KEYS             equ $100
+
 ; A2 text ending with a zero or $FF byte, D1 X, D2 Y, D3 field width, D4 colour, D5
-; alignment. Preserves all registers.
+; alignment, with UI_KEYS for a button label. Preserves all registers.
 ui_text_draw:
-        movem.l d0-d1/d6/a2,-(sp)
+        movem.l d0-d1/d5-d7/a2-a3,-(sp)
+        moveq #0,d7
+        bclr #8,d5
+        beq.s .plain
+        moveq #1,d7
+.plain:
         moveq #0,d6
+        movea.l a2,a3
 .length:
-        move.b (a2,d6.w),d0
+        move.b (a3)+,d0
         beq.s .measured
         cmpi.b #$ff,d0
         beq.s .measured
+        tst.w d7
+        beq.s .count
+        cmpi.b #UI_KEY_MARK,d0
+        beq.s .length
+.count:
         addq.w #1,d6
         bra.s .length
 .measured:
@@ -386,11 +403,33 @@ ui_text_draw:
 .char:
         moveq #0,d0
         move.b (a2)+,d0
+        tst.w d7
+        beq.s .glyph
+        cmpi.b #UI_KEY_MARK,d0
+        bne.s .glyph
+        moveq #2,d7
+        bra.s .char
+.glyph:
         bsr.s ui_glyph
+        cmpi.w #2,d7
+        bne.s .advance
+        moveq #1,d7
+        bsr.s ui_underline
+.advance:
         addq.w #UI_CELL_WIDTH,d1
         dbra d6,.char
 .out:
-        movem.l (sp)+,d0-d1/d6/a2
+        movem.l (sp)+,d0-d1/d5-d7/a2-a3
+        rts
+
+; The line under the glyph at D1 X, D2 Y in colour D4, below the descenders.
+ui_underline:
+        movem.l d2-d3/d6,-(sp)
+        addq.w #UI_GLYPH_ROWS+1,d2
+        moveq #UI_CELL_WIDTH-1,d3
+        moveq #1,d6
+        bsr ui_rect
+        movem.l (sp)+,d2-d3/d6
         rts
 
 ; Character D0 at D1 X, D2 Y in colour D4. Codes outside 33-126 draw

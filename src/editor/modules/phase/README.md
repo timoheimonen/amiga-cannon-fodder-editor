@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -12,7 +12,8 @@ objectives as toggle buttons with the completion rule of the last one
 changed, steppers for recruits, recruit rank and the aggression range that
 repeat while held and are disabled at their limits, and toggles for grenades,
 rockets, enemy grenades, the overview map and the final-map countdown. Done
-(also Return) and Cancel (also Escape) close it. Rename opens the shared
+(also Return) and Cancel (also Escape) close it and return to Mission
+phases. Rename opens the shared
 title entry, which checks both native display-width limits. Objective order
 is retained; removing the last objective is refused with a message.
 

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -18,7 +18,7 @@ TPL_TEXT       equ EDITOR_UI_BASE+160
 
 ; Template dialogs of the Slave's dialog service over the darkened map.
 ; D0.w kind: 0 picks an original mission, then one of its phases, from lists
-; of the game's own titles; 1 asks for the game disk (drive DF0-DF3); 2 asks
+; of the game's own titles; 1 says the game disk could not be read; 2 asks
 ; to restore the Custom directory. D1 ignored. Returns 0 cancel, 1 use or
 ; retry; kinds 1 and 2 retry by themselves every 100 frames without a press.
 ; Owns WORK160..383 and UI160..223 until return. No disk calls.
@@ -67,9 +67,6 @@ edtr_modal:
 .open:
         bsr dialog_open
         bne.s tpl_dialog_refuse
-        cmpi.w #1,d7
-        bne.s edtr_modal_idle
-        bsr tpl_drive_draw
 
 edtr_modal_idle:
         jsr wait_frame
@@ -82,20 +79,18 @@ edtr_modal_idle:
         moveq #1,d0
         bra.s .chosen
 .poll:
+        tst.w EXIT_KIND
+        bne.s .dialog
+        bsr tpl_list_key
+        bpl.s .event
+.dialog:
         bsr dialog_poll
         bmi.s edtr_modal_idle
         tst.w EXIT_KIND
-        bne.s .prompt
+        bne.s .chosen
+.event:
         bsr tpl_list_event
         bmi.s edtr_modal_idle
-        bra.s .chosen
-.prompt:
-        cmpi.w #TPL_DF0,d0
-        blo.s .chosen
-        subi.w #TPL_DF0,d0
-        move.w d0,TPL_DRIVE
-        bsr tpl_drive_draw
-        bra.s edtr_modal_idle
 .chosen:
         move.w d0,EXIT_CHOICE
 

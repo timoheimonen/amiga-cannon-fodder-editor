@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -169,7 +169,15 @@ cf_preflight_track:
 
 ; Bounded generation-prefix reservation. At most150 records
 ; can exclude150 candidate prefixes; no wrapping search depends on payload data.
+; A zero hint (a new mission or Save as) starts at the next block of 65,536
+; generations after the highest one in Custom; a Save passes its own
+; generation + 1. File names sort by generation, so the lists keep missions
+; in the order they were made and a saved mission keeps its place.
 cf_preflight_choose_generation:
+        tst.l cf_preflight_generation
+        bne.s .candidate
+        bsr.s cf_preflight_block
+        move.l d0,cf_preflight_generation
 .candidate:
         move.l cf_preflight_generation,d0
         lea cf_preflight_token,a0
@@ -200,6 +208,48 @@ cf_preflight_choose_generation:
 .next:  lea 32(a5),a5
         subq.w #1,d6
         bne.s .record
+        rts
+
+; D0.l = the first generation of the block after the highest name in the
+; catalog that starts with eight hexadecimal digits, 0 when there is none.
+cf_preflight_block:
+        movem.l d1-d6/a0-a1,-(sp)
+        moveq #0,d4
+        moveq #0,d5
+        lea CF_PREFLIGHT_DIRECTORY+32,a0
+        move.w cf_preflight_count,d6
+        beq.s .done
+.record:
+        movea.l a0,a1
+        moveq #0,d0
+        moveq #7,d1
+.digit: move.b (a1)+,d2
+        ori.b #$20,d2
+        subi.b #'0',d2
+        cmpi.b #9,d2
+        bls.s .value
+        subi.b #'a'-'0'-10,d2
+        cmpi.b #10,d2
+        blo.s .skip
+        cmpi.b #15,d2
+        bhi.s .skip
+.value: lsl.l #4,d0
+        or.b d2,d0
+        dbf d1,.digit
+        moveq #1,d5
+        cmp.l d4,d0
+        bls.s .skip
+        move.l d0,d4
+.skip:  lea 32(a0),a0
+        subq.w #1,d6
+        bne.s .record
+.done:  moveq #0,d0
+        tst.w d5
+        beq.s .out
+        move.l d4,d0
+        clr.w d0
+        addi.l #$10000,d0
+.out:   movem.l (sp)+,d1-d6/a0-a1
         rts
 cf_preflight_end:
         ifgt CF_PREFLIGHT_WORK_END-EDITOR_READBACK_BASE-EDITOR_READBACK_BYTES

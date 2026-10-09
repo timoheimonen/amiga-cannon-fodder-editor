@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -78,8 +78,6 @@ dialog_status:
         rts
 
 dlg_messages:
-        dc.w EDTR_MARKER_WARNING
-        dc.l dlg_marker_warning
         dc.w EDTR_MARKER_LIMIT
         dc.l dlg_marker_limit
         dc.w OBJECT_LAST_ITEM
@@ -94,12 +92,15 @@ dlg_messages:
         dc.l dlg_unavailable
         dc.w 0
 
-; Old hit zones are kept: two columns split near X 152, rows every 20 lines
-; from Y 72; buttons of the lower dialogs on Y 128.
+; Two columns split near X 152, rows every 20 lines from Y 72; buttons of
+; the lower dialogs on Y 128. Settings and Close share the last row. The
+; menu's title strip has a second line for the version and the author; the
+; panel grows upwards for it, so the buttons keep their places.
+DLG_MENU_TOP        equ DLG_TOP-10
 dlg_menu:
-        dc.w DLG_TOP,124,UI_SELECT
+        dc.w DLG_MENU_TOP,134,UI_SELECT
         dc.l dlg_menu_title,dlg_menu_body
-        dc.w 8,0,9
+        dc.w 9,0,10
         dc.w 20,72,128,18,4,UI_NORMAL
         dc.l dlg_new_label
         dc.w 156,72,128,18,5,UI_NORMAL
@@ -116,11 +117,17 @@ dlg_menu:
         dc.l dlg_phases_label
         dc.w 156,132,128,18,2,UI_NORMAL
         dc.l dlg_exit_hill_label
-        dc.w 116,156,72,14,0,UI_NORMAL
+        dc.w 20,152,128,18,9,UI_NORMAL
+        dc.l dlg_settings_label
+        dc.w 156,152,128,18,0,UI_NORMAL
         dc.l dlg_close_label
 dlg_menu_body:
-        dc.w UI_TEXT_AT,148,56,148,UI_ACCENT,UI_RIGHT
+        dc.w UI_RECT,0,DLG_MENU_TOP+13,320,10,UI_SELECT
+        dc.w UI_TEXT_AT,148,DLG_MENU_TOP+4,148,UI_ACCENT,UI_RIGHT
         dc.l EXIT_TEXT
+        dc.w UI_TEXT,8,DLG_MENU_TOP+14,288,UI_LIGHT,UI_LEFT
+        dc.b "V1.1 by Timo Heimonen (timo.heimonen@proton.me)",0
+        even
         dc.w UI_END
 
 dlg_unsaved:
@@ -178,21 +185,6 @@ dlg_assets_body:
         even
         dc.w UI_TEXT,16,100,288,UI_INK,UI_LEFT
         dc.b "or try loading them again.",0
-        even
-        dc.w UI_END
-
-dlg_marker_warning:
-        dc.w DLG_TOP,DLG_HEIGHT,UI_SELECT
-        dc.l dlg_marker_title,dlg_marker_body
-        dc.w 0,0,1
-        dc.w 116,128,72,14,0,UI_NORMAL
-        dc.l dlg_ok_label
-dlg_marker_body:
-        dc.w UI_TEXT,16,76,288,UI_INK,UI_LEFT
-        dc.b "Markers change where enemies can see the",0
-        even
-        dc.w UI_TEXT,16,88,288,UI_INK,UI_LEFT
-        dc.b "squad. Playtest the phase after editing them.",0
         even
         dc.w UI_END
 
@@ -328,29 +320,29 @@ dlg_large_body:
         dc.w UI_END
 
 dlg_large_title: dc.b "Large change",0
-dlg_continue_label: dc.b "Continue",0
+dlg_continue_label: dc.b "_Continue",0
 dlg_cancel_label: dc.b "Cancel",0
         ifnd DIALOG_LARGE_ONLY
 dlg_menu_title: dc.b "Editor menu",0
 dlg_unsaved_status: dc.b "Unsaved changes",0
 dlg_empty: dc.b 0
-dlg_new_label: dc.b "New mission...",0
-dlg_template_label: dc.b "Template...",0
-dlg_open_label: dc.b "Open mission...",0
-dlg_save_label: dc.b "Save",0
-dlg_save_as_label: dc.b "Save as...",0
-dlg_resize_label: dc.b "Resize map...",0
-dlg_phases_label: dc.b "Mission phases...",0
-dlg_exit_hill_label: dc.b "Exit to hill",0
-dlg_close_label: dc.b "Close",0
+dlg_new_label: dc.b "_New mission...",0
+dlg_template_label: dc.b "_Template...",0
+dlg_open_label: dc.b "_Open mission...",0
+dlg_save_label: dc.b "_Save",0
+dlg_save_as_label: dc.b "Save _as...",0
+dlg_resize_label: dc.b "_Resize map...",0
+dlg_phases_label: dc.b "Mission _phases...",0
+dlg_exit_hill_label: dc.b "E_xit to hill",0
+dlg_settings_label: dc.b "S_ettings...",0
+dlg_close_label: dc.b "_Close",0
 dlg_unsaved_title: dc.b "Unsaved changes",0
-dlg_discard_label: dc.b "Don't save",0
+dlg_discard_label: dc.b "_Don't save",0
 dlg_phase_title: dc.b "Save before adding a phase",0
 dlg_assets_title: dc.b "Terrain graphics missing",0
-dlg_exit_label: dc.b "Exit",0
-dlg_retry_label: dc.b "Retry",0
-dlg_ok_label: dc.b "OK",0
-dlg_marker_title: dc.b "Markers affect sight",0
+dlg_exit_label: dc.b "E_xit",0
+dlg_retry_label: dc.b "_Retry",0
+dlg_ok_label: dc.b "_OK",0
 dlg_limit_title: dc.b "Marker limit",0
 dlg_object_title: dc.b "Last object",0
 dlg_no_room_title: dc.b "Object not placed",0

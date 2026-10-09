@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -8,7 +8,8 @@
 ; The phase result: a dialog of the Slave's dialog service over black. The
 ; title names the outcome, a line explains it and, after a failed
 ; transaction, a red line gives its status. Retry, Next phase and Return to
-; hill (default, also Escape); R and N stay as keys. With TEST_RELOAD_UI the
+; hill (also Escape); Next phase is the default when the session allows it,
+; otherwise Return to hill. R, N and H choose them. With TEST_RELOAD_UI the
 ; title says that the editor could not be reloaded.
 RESULT_UI                 equ EDITOR_UI_BASE
 RESULT_ALLOWED            equ RESULT_UI+116
@@ -77,13 +78,15 @@ controller_result_ui:
         bne.s   .retry
         bset    #0,d2
 .retry:
+        ; After a won phase Return continues with the next one.
+        lea     dlg_result_next(pc),a0
         btst    #1,RESULT_ALLOWED+1
         bne.s   .next
         bset    #1,d2
-.next:
         lea     dlg_result(pc),a0
+.next:
         bsr     dialog_open
-        bne     result_ui_refuse
+        bne.s   result_ui_refuse
         movea.l a2,a1
         moveq   #16,d1
         moveq   #RESULT_LINE_Y,d2
@@ -108,24 +111,8 @@ controller_result_ui:
 
 controller_result_ui_idle:
         jsr     wait_frame
-        move.w  native_last_key,d1
-        moveq   #1,d0
-        cmpi.w  #'R',d1
-        beq.s   .key
-        moveq   #2,d0
-        cmpi.w  #'N',d1
-        bne.s   .poll
-.key:
-        clr.w   native_last_key
-        move.w  d0,d1
-        subq.w  #1,d1
-        btst    d1,RESULT_ALLOWED+1
-        bne.s   .chosen
-        bra.s   controller_result_ui_idle
-.poll:
         bsr     dialog_poll
         bmi.s   controller_result_ui_idle
-.chosen:
         move.w  d0,RESULT_CHOICE
 
 controller_result_ui_finish:
@@ -141,17 +128,26 @@ result_ui_refuse:
         movem.l (sp)+,d1-d7/a0-a6
         rts
 
-; Retry, Next phase and Return to hill (default) keep the old row Y128-143.
-dlg_result:
-        dc.w 64,88,UI_SELECT
-        dc.l RESULT_TEXT,0
-        dc.w 2,0,3
+RESULT_BUTTONS macro
         dc.w 16,126,92,14,1,UI_NORMAL
         dc.l result_ui_retry_text
         dc.w 112,126,92,14,2,UI_NORMAL
         dc.l result_ui_next_text
         dc.w 208,126,92,14,0,UI_NORMAL
         dc.l result_ui_return_text
+        endm
+; Retry, Next phase and Return to hill keep the old row Y128-143. The two
+; descriptors differ only in the default: Return to hill, or Next phase.
+dlg_result:
+        dc.w 64,88,UI_SELECT
+        dc.l RESULT_TEXT,0
+        dc.w 2,0,3
+        RESULT_BUTTONS
+dlg_result_next:
+        dc.w 64,88,UI_SELECT
+        dc.l RESULT_TEXT,0
+        dc.w 1,0,3
+        RESULT_BUTTONS
         ifd TEST_RELOAD_UI
 result_ui_reload: dc.b "Could not reload the editor",0
 result_ui_reload_line: dc.b "The saved mission could not be read again.",0
@@ -164,9 +160,9 @@ result_ui_no_soldiers: dc.b "Squad lost",0
 result_ui_no_soldiers_line: dc.b "No soldier of the squad is left.",0
         endif
 result_ui_error: dc.b "Could not continue: status ",0
-result_ui_retry_text: dc.b "Retry",0
-result_ui_next_text: dc.b "Next phase",0
-result_ui_return_text: dc.b "Return to hill",0
+result_ui_retry_text: dc.b "_Retry",0
+result_ui_next_text: dc.b "_Next phase",0
+result_ui_return_text: dc.b "Return to _hill",0
         even
 controller_result_ui_end:
         ifgt RESULT_UI_BYTES-EDITOR_UI_BYTES

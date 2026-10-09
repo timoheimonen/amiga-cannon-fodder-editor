@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -152,7 +152,7 @@ dialog_open:
 .enabled:
         cmp.w DIALOG_DEFAULT(a4),d6
         bne.s .state
-        moveq #UI_DEFAULT,d0
+        bsr dialog_framed
 .state:
         move.w d0,(a1)+
         move.w d0,(a2)+
@@ -316,11 +316,29 @@ dialog_draw_button:
         lea dlg_buttons(pc),a1
         adda.w d0,a1
         lea dlg_list(pc),a0
-        move.w #UI_BUTTON_AT,(a0)+
         lea dlg_flags(pc),a2
         btst #DIALOG_ROW_BIT-8,0(a2,d7.w)
-        beq.s .button
-        move.w #UI_ROW_AT,-2(a0)
+        beq.s .frame
+        move.w #UI_ROW_AT,(a0)+
+        bra.s .button
+.frame:
+        ; The frame of the default lies around the button: clear it first,
+        ; since the frame moves with the cursor keys.
+        move.w #UI_FRAME,(a0)+
+        move.w DIALOG_BUTTON_X(a1),d0
+        subq.w #1,d0
+        move.w d0,(a0)+
+        move.w DIALOG_BUTTON_Y(a1),d0
+        subq.w #1,d0
+        move.w d0,(a0)+
+        move.w DIALOG_BUTTON_W(a1),d0
+        addq.w #2,d0
+        move.w d0,(a0)+
+        move.w DIALOG_BUTTON_H(a1),d0
+        addq.w #2,d0
+        move.w d0,(a0)+
+        move.w #UI_PANEL,(a0)+
+        move.w #UI_BUTTON_AT,(a0)+
 .button:
         move.l DIALOG_BUTTON_X(a1),(a0)+
         move.l DIALOG_BUTTON_W(a1),(a0)+
@@ -567,61 +585,34 @@ dialog_poll:
         moveq #-2,d0
         move.w dlg_open(pc),d1
         beq .out
-        move.w native_mouse_x,d1
-        addi.w #16,d1
-        move.w native_mouse_y,d2
-        moveq #-1,d6
-        moveq #0,d7
-        lea dlg_buttons(pc),a1
-        bra.s .test_next
-.test:
-        cmpi.w #UI_DISABLED,DIALOG_BUTTON_STATE(a1)
-        beq.s .miss
-        move.w d1,d0
-        sub.w DIALOG_BUTTON_X(a1),d0
-        cmp.w DIALOG_BUTTON_W(a1),d0
-        bhs.s .miss
-        move.w d2,d0
-        sub.w DIALOG_BUTTON_Y(a1),d0
-        cmp.w DIALOG_BUTTON_H(a1),d0
-        bhs.s .miss
-        move.w d7,d6
-.miss:
-        lea DIALOG_BUTTON_BYTES(a1),a1
-        addq.w #1,d7
-.test_next:
-        cmp.w dlg_count(pc),d7
-        blo.s .test
         ; D6 = button under the pointer. Move the hover highlight.
+        bsr dialog_pointed
         move.w dlg_hover(pc),d7
         cmp.w d6,d7
         beq.s .keys
-        tst.w d7
-        bmi.s .highlight
-        moveq #0,d0
-        bsr dialog_set_hover
-.highlight:
-        move.w d6,d7
-        bmi.s .moved
-        moveq #1,d0
-        bsr dialog_set_hover
-.moved:
         lea dlg_hover(pc),a1
         move.w d6,(a1)
+        bsr dialog_refresh
+        move.w d6,d7
+        bsr dialog_refresh
 .keys:
         move.w native_last_key,d1
         clr.w native_last_key
         cmpi.w #$c4,d1
         bne.s .escape
         move.w dlg_default(pc),d7
-        bmi.s .escape
+        bmi.s .mouse
         bsr dialog_button
         cmpi.w #UI_DISABLED,DIALOG_BUTTON_STATE(a1)
-        beq.s .escape
+        beq.s .mouse
         bra .code
 .escape:
         cmpi.w #$c5,d1
         beq.s .cancel
+        bsr dialog_key
+        tst.w d7
+        bpl .chosen_button
+.mouse:
         lea dlg_right_held(pc),a1
         tst.w native_right_down
         bne.s .right
@@ -658,6 +649,8 @@ dialog_poll:
         beq.s .armed
         lea dlg_held(pc),a1
         move.w #1,(a1)
+        lea dlg_pressed(pc),a1
+        move.w #-1,(a1)
         bra .none
 .moved_away:
         lea dlg_guard(pc),a1
@@ -666,10 +659,22 @@ dialog_poll:
         lea dlg_held(pc),a1
         tst.w native_left_down
         bne.s .down
+        ; Released: a button pressed in this dialog is chosen when the
+        ; pointer is still on it, so a press can be taken back by moving off.
+        tst.w (a1)
+        beq .none
         clr.w (a1)
         lea dlg_pressed(pc),a1
+        move.w (a1),d7
         move.w #-1,(a1)
-        bra.s .none
+        tst.w d7
+        bmi.s .none
+        bsr dialog_refresh
+        cmp.w d6,d7
+        bne.s .none
+        bsr dialog_immediate
+        bne.s .none
+        bra.s .clicked
 .down:
         tst.w (a1)
         bne.s .held
@@ -679,15 +684,20 @@ dialog_poll:
         move.w #DIALOG_REPEAT_DELAY,(a1)
         move.w d6,d7
         bmi.s .none
+        bsr dialog_refresh
+        ; List rows and repeating buttons act on the press.
+        bsr dialog_immediate
+        beq.s .none
+.clicked:
         lea dlg_click(pc),a1
         move.w #1,(a1)+
         move.w native_field_counter,(a1)
         bra.s .chosen_button
         ; A repeating button held under the pointer is chosen again.
 .held:
-        move.w d6,d7
+        move.w dlg_pressed(pc),d7
         bmi.s .none
-        cmp.w dlg_pressed(pc),d7
+        cmp.w d6,d7
         bne.s .none
         lea dlg_flags(pc),a1
         btst #0,0(a1,d7.w)
@@ -716,20 +726,287 @@ dialog_button:
         adda.w d0,a1
         rts
 
-; D7.w index, D0.w 1 = hovered. Redraws the button.
-dialog_set_hover:
-        move.w d0,d2
-        bsr.s dialog_button
+; D6.w = the enabled button under the pointer, -1 none. Trashes D0-D2/D7/A1.
+dialog_pointed:
+        move.w native_mouse_x,d1
+        addi.w #16,d1
+        move.w native_mouse_y,d2
+        moveq #-1,d6
+        moveq #0,d7
+        lea dlg_buttons(pc),a1
+        bra.s .next
+.test:
+        cmpi.w #UI_DISABLED,DIALOG_BUTTON_STATE(a1)
+        beq.s .miss
+        move.w d1,d0
+        sub.w DIALOG_BUTTON_X(a1),d0
+        cmp.w DIALOG_BUTTON_W(a1),d0
+        bhs.s .miss
+        move.w d2,d0
+        sub.w DIALOG_BUTTON_Y(a1),d0
+        cmp.w DIALOG_BUTTON_H(a1),d0
+        bhs.s .miss
+        move.w d7,d6
+.miss:
+        lea DIALOG_BUTTON_BYTES(a1),a1
+        addq.w #1,d7
+.next:
+        cmp.w dlg_count(pc),d7
+        blo.s .test
+        rts
+
+; D7.w index -> Z clear for a list row or a repeating button, which act on
+; the press; ordinary buttons act on the release. Trashes D0.
+dialog_immediate:
+        move.l a1,-(sp)
+        lea dlg_flags(pc),a1
+        move.b 0(a1,d7.w),d0
+        movea.l (sp)+,a1
+        andi.b #(DIALOG_REPEAT|DIALOG_ROW)>>8,d0
+        rts
+
+; D1.w key event. The cursor keys move the frame of the default button to
+; the nearest button in their direction; a letter or digit chooses the
+; button whose label marks it. D7.w = the chosen button, otherwise -1.
+dialog_key:
+        movem.l d0-d2/a1-a2,-(sp)
+        moveq #-1,d7
+        cmpi.w #$cc,d1
+        blo.s .letter
+        cmpi.w #$cf,d1
+        bhi.s .out
+        bsr dialog_focus_move
+        bra.s .out
+.letter:
+        cmpi.w #'a',d1
+        blo.s .upper
+        cmpi.w #'z',d1
+        bhi.s .out
+        subi.w #'a'-'A',d1
+.upper:
+        cmpi.w #'0',d1
+        blo.s .out
+        cmpi.w #'Z',d1
+        bhi.s .out
+        moveq #0,d0
+        lea dlg_buttons(pc),a1
+        bra.s .next
+.button:
+        exg d0,d7
+        bsr dialog_focusable
+        exg d0,d7
+        bne.s .skip
+        move.l DIALOG_BUTTON_LABEL(a1),d2
+        beq.s .skip
+        movea.l d2,a2
+.char:
+        move.b (a2)+,d2
+        beq.s .skip
+        cmpi.b #$ff,d2
+        beq.s .skip
+        cmpi.b #UI_KEY_MARK,d2
+        bne.s .char
+        move.b (a2),d2
+        cmpi.b #'a',d2
+        blo.s .compare
+        cmpi.b #'z',d2
+        bhi.s .compare
+        subi.b #'a'-'A',d2
+.compare:
+        cmp.b d1,d2
+        bne.s .skip
+        move.w d0,d7
+        bra.s .out
+.skip:
+        lea DIALOG_BUTTON_BYTES(a1),a1
+        addq.w #1,d0
+.next:
+        cmp.w dlg_count(pc),d0
+        blo.s .button
+.out:
+        movem.l (sp)+,d0-d2/a1-a2
+        rts
+
+; D1.w cursor key ($CC up, $CD down, $CE right, $CF left): the frame moves
+; to the enabled button whose centre lies furthest ahead in that direction
+; for the least sideways distance; without a framed button the first one
+; takes it.
+dialog_focus_move:
+        movem.l d0-d7/a1-a3,-(sp)
+        move.w dlg_default(pc),d7
+        bmi.s .first
+        bsr dialog_focusable
+        bne.s .first
+        bsr dialog_button
+        bsr dialog_centre
+        move.w d2,d4
+        move.w d3,d5
+        move.l #$7fffffff,d6
+        movea.w #-1,a3
+        moveq #0,d7
+        lea dlg_buttons(pc),a1
+        bra.s .next
+.candidate:
+        cmp.w dlg_default(pc),d7
+        beq.s .skip
+        bsr dialog_focusable
+        bne.s .skip
+        bsr dialog_centre
+        sub.w d4,d2
+        sub.w d5,d3
+        cmpi.w #$cd,d1
+        bhi.s .ahead
+        exg d2,d3
+.ahead:
+        cmpi.w #$cc,d1
+        beq.s .back
+        cmpi.w #$cf,d1
+        bne.s .forward
+.back:
+        neg.w d2
+.forward:
+        tst.w d2
+        ble.s .skip
+        tst.w d3
+        bpl.s .score
+        neg.w d3
+.score:
+        add.w d3,d3
+        add.w d3,d2
+        ext.l d2
+        cmp.l d6,d2
+        bhs.s .skip
+        move.l d2,d6
+        movea.w d7,a3
+.skip:
+        lea DIALOG_BUTTON_BYTES(a1),a1
+        addq.w #1,d7
+.next:
+        cmp.w dlg_count(pc),d7
+        blo.s .candidate
+        move.w a3,d7
+        bmi.s .out
+        bsr.s dialog_focus_set
+.out:
+        movem.l (sp)+,d0-d7/a1-a3
+        rts
+.first:
+        moveq #0,d7
+.find:
+        cmp.w dlg_count(pc),d7
+        bhs.s .out
+        bsr.s dialog_focusable
+        beq.s .take
+        addq.w #1,d7
+        bra.s .find
+.take:
+        bsr.s dialog_focus_set
+        bra.s .out
+
+; D7.w index -> Z set when the button can take the frame: enabled and not a
+; list row.
+dialog_focusable:
+        movem.l d0/a2,-(sp)
         move.w d7,d0
         add.w d0,d0
         lea dlg_states(pc),a2
-        move.w 0(a2,d0.w),d0
-        tst.w d2
-        beq.s .state
-        bsr.s dialog_hovered
-.state:
-        move.w d0,DIALOG_BUTTON_STATE(a1)
-        bra dialog_draw_button
+        cmpi.w #UI_DISABLED,0(a2,d0.w)
+        beq.s .no
+        lea dlg_flags(pc),a2
+        btst #DIALOG_ROW_BIT-8,0(a2,d7.w)
+        bne.s .no
+        moveq #0,d0
+        bra.s .out
+.no:
+        moveq #1,d0
+.out:
+        movem.l (sp)+,d0/a2
+        rts
+
+; A1 button -> D2.w X and D3.w Y of its centre, doubled.
+dialog_centre:
+        move.w DIALOG_BUTTON_X(a1),d2
+        add.w d2,d2
+        add.w DIALOG_BUTTON_W(a1),d2
+        move.w DIALOG_BUTTON_Y(a1),d3
+        add.w d3,d3
+        add.w DIALOG_BUTTON_H(a1),d3
+        rts
+
+; Moves the frame of the default button to button D7.w: Return chooses it.
+dialog_focus_set:
+        movem.l d0-d1/d7/a2,-(sp)
+        move.w d7,d1
+        lea dlg_default(pc),a2
+        move.w (a2),d7
+        move.w d1,(a2)
+        tst.w d7
+        bmi.s .new
+        bsr.s dialog_state_word
+        move.w (a2),d0
+        bsr dialog_unframed
+        move.w d0,(a2)
+        bsr.s dialog_refresh
+.new:
+        move.w d1,d7
+        bsr.s dialog_state_word
+        move.w (a2),d0
+        bsr dialog_framed
+        move.w d0,(a2)
+        bsr.s dialog_refresh
+        movem.l (sp)+,d0-d1/d7/a2
+        rts
+
+; D7.w index -> A2 its base state word.
+dialog_state_word:
+        lea dlg_states(pc),a2
+        adda.w d7,a2
+        adda.w d7,a2
+        rts
+
+; D7.w index (negative: none). Draws the button again when the state it
+; shows changed. Preserves all registers.
+dialog_refresh:
+        tst.w d7
+        bmi.s .out
+        movem.l d0-d2/a0-a2,-(sp)
+        bsr.s dialog_visual
+        move.w d0,d2
+        bsr dialog_button
+        cmp.w DIALOG_BUTTON_STATE(a1),d2
+        beq.s .same
+        move.w d2,DIALOG_BUTTON_STATE(a1)
+        bsr dialog_draw_button
+.same:
+        movem.l (sp)+,d0-d2/a0-a2
+.out:
+        rts
+
+; D7.w index -> D0.w the state to draw: the base state, hovered, or held
+; down (selected, framed when it is the default). Trashes A2.
+dialog_visual:
+        bsr.s dialog_state_word
+        move.w (a2),d0
+        cmp.w dlg_hover(pc),d7
+        bne.s .out
+        cmp.w dlg_pressed(pc),d7
+        bne.s dialog_hovered
+        lea dlg_held(pc),a2
+        tst.w (a2)
+        beq.s dialog_hovered
+        lea dlg_flags(pc),a2
+        btst #DIALOG_ROW_BIT-8,0(a2,d7.w)
+        bne.s dialog_hovered
+        cmpi.w #UI_DEFAULT,d0
+        beq.s .framed
+        cmpi.w #UI_NORMAL,d0
+        bne.s .out
+        moveq #UI_ACTIVE,d0
+.out:
+        rts
+.framed:
+        moveq #UI_DEFAULT_ACTIVE,d0
+        rts
 
 ; D0.w base state -> the state drawn while the pointer is over the button.
 dialog_hovered:
@@ -744,8 +1021,36 @@ dialog_hovered:
 .keep:
         rts
 
+; D0.w state of the default button: NORMAL is shown as DEFAULT and ACTIVE
+; as DEFAULT_ACTIVE.
+dialog_framed:
+        cmpi.w #UI_NORMAL,d0
+        bne.s .active
+        moveq #UI_DEFAULT,d0
+        rts
+.active:
+        cmpi.w #UI_ACTIVE,d0
+        bne.s .keep
+        moveq #UI_DEFAULT_ACTIVE,d0
+.keep:
+        rts
+
+; D0.w framed state -> the state without the frame.
+dialog_unframed:
+        cmpi.w #UI_DEFAULT,d0
+        bne.s .active
+        moveq #UI_NORMAL,d0
+        rts
+.active:
+        cmpi.w #UI_DEFAULT_ACTIVE,d0
+        bne.s .keep
+        moveq #UI_ACTIVE,d0
+.keep:
+        rts
+
 ; D2.w button index, D3.w new state (UI_NORMAL, UI_ACTIVE or UI_DISABLED;
-; the default button shows NORMAL as DEFAULT), A0 new label or 0.
+; the framed default button shows NORMAL as DEFAULT and ACTIVE as
+; DEFAULT_ACTIVE), A0 new label or 0.
 dialog_set:
         moveq #10,d0
         move.w dlg_open(pc),d1
@@ -759,27 +1064,29 @@ dialog_set:
         move.l a0,DIALOG_BUTTON_LABEL(a1)
 .label:
         move.w d3,d0
-        cmpi.w #UI_NORMAL,d0
-        bne.s .base
         cmp.w dlg_default(pc),d7
         bne.s .base
-        moveq #UI_DEFAULT,d0
+        bsr dialog_framed
 .base:
-        move.w d7,d1
-        add.w d1,d1
-        lea dlg_states(pc),a2
-        move.w d0,0(a2,d1.w)
+        bsr dialog_state_word
+        move.w d0,(a2)
+        cmpi.w #UI_DISABLED,d0
+        bne.s .draw
+        ; A disabled button is neither pointed at nor held down.
         lea dlg_hover(pc),a2
         cmp.w (a2),d7
-        bne.s .draw
-        cmpi.w #UI_DISABLED,d0
-        bne.s .hovered
+        bne.s .pressed
         move.w #-1,(a2)
-        bra.s .draw
-.hovered:
-        bsr.s dialog_hovered
+.pressed:
+        lea dlg_pressed(pc),a2
+        cmp.w (a2),d7
+        bne.s .draw
+        move.w #-1,(a2)
 .draw:
-        move.w d0,DIALOG_BUTTON_STATE(a1)
+        bsr dialog_visual
+        move.w d0,d1
+        bsr dialog_button
+        move.w d1,DIALOG_BUTTON_STATE(a1)
         bsr dialog_draw_button
         moveq #0,d0
 .out:

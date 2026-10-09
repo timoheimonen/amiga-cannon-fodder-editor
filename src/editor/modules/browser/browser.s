@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -59,12 +59,23 @@ browser_control_inspect:
         tst.w   d0
         bne     browser_control_failed
 browser_control_redraw:
-        bsr     browser_ui_draw
-browser_selection_ready:
+        ; Play and Edit check the selected mission first. When the check has
+        ; returned, the action goes on without drawing the list again.
+        tst.w   BROWSER_ACT
+        beq.s   .draw
+        clr.w   BROWSER_ACT
+        bsr     browser_can_action
+        bne     browser_request_action
+.draw:
         tst.w   BROWSER_FILES_VIEW
-        bne.s   browser_idle
-        tst.w   BROWSER_VALIDATION
-        beq     browser_request_validation
+        bne.s   .named
+        tst.w   BROWSER_COUNT
+        beq.s   .named
+        bsr     browser_name_selected
+.named:
+; Reached once per drawn selection, before the list is drawn.
+browser_selection_ready:
+        bsr     browser_ui_draw
 browser_idle:
         bsr     browser_ui_input
         cmpi.w  #1,d0
@@ -96,6 +107,7 @@ browser_control_down:
         bhs.s   browser_idle
         move.w  d0,BROWSER_SELECTED
 browser_control_changed:
+        clr.w   BROWSER_ACT
         clr.w   BROWSER_FILES_STATUS
         clr.w   BROWSER_VALIDATION
         clr.w   BROWSER_STATUS
@@ -192,19 +204,19 @@ browser_resume:
         cmpi.l  #STORAGE_MODULE_ID,BROWSER_PENDING_ID
         bne     .done
         move.w  EDITOR_SESSION_BASE+REQ_LAST_RESULT,d0
-        bne     .failed
+        bne.s   .failed
         move.w  STORAGE_STATUS,d0
         bne.s   .failed
         cmpi.l  #1,STORAGE_READY
         bne     .done
         cmpi.l  #CFMD_MAGIC,EDITOR_METADATA_BASE
-        bne     .done
+        bne.s   .done
         lea     BROWSER_SELECTED_NAME,a0
         lea     EDITOR_METADATA_BASE+CFMD_MANIFEST_NAME,a1
         moveq   #3,d0
 .name:
         cmpm.l  (a0)+,(a1)+
-        bne     .done
+        bne.s   .done
         dbf     d0,.name
         move.l  STORAGE_ERRORS,BROWSER_ERRORS
         clr.w   BROWSER_STATUS
@@ -421,7 +433,7 @@ browser_page_parse:
         bsr     cfmi_parse
         tst.w   d0
         bne.s   browser_page_damaged
-        bsr.s   browser_row_pointer
+        bsr     browser_row_pointer
         moveq   #0,d0
         move.b  EDITOR_SERIAL_WORK_BASE+CFMD_PHASE_COUNT,d0
         move.w  d0,BROWSER_ROW_PHASES(a4)
@@ -457,6 +469,20 @@ browser_page_next:
 browser_page_done:
         bra.s   browser_epoch
 browser_page_return:
+        rts
+
+; The selected row's file name. It locates the selection again when a
+; module returns, and ties a check to the mission it was made for.
+browser_name_selected:
+        move.w  BROWSER_SELECTED,d0
+        lsl.w   #4,d0
+        lea     BROWSER_NAMES,a0
+        adda.w  d0,a0
+        lea     BROWSER_SELECTED_NAME,a1
+        moveq   #3,d0
+.name:
+        move.l  (a0)+,(a1)+
+        dbf     d0,.name
         rts
 
 browser_row_pointer:
@@ -592,7 +618,14 @@ browser_request_action:
         tst.w   BROWSER_FILES_VIEW
         bne     browser_files_delete
         bsr.s   browser_can_action
-        beq.s   browser_request_validation
+        bne.s   .allowed
+        ; Not checked yet: check, then go on. A checked mission that cannot
+        ; be played or opened stays selected with the reason shown.
+        tst.w   BROWSER_VALIDATION
+        bne     browser_idle
+        move.w  #1,BROWSER_ACT
+        bra.s   browser_request_validation
+.allowed:
         cmpi.w  #REQ_PURPOSE_EDITOR,BROWSER_PURPOSE
         bne.s   browser_request_play
         move.l  #$00020000,BROWSER_AUTHORING_OPERATION
@@ -623,14 +656,14 @@ browser_request_controller:
 
 browser_request_validation:
         tst.w   BROWSER_COUNT
-        beq     browser_idle
+        beq     browser_check_refused
         move.w  BROWSER_SELECTED,d0
         sub.w   BROWSER_TOP,d0
         mulu.w  #BROWSER_ROW_BYTES,d0
         lea     BROWSER_ROWS,a0
         adda.w  d0,a0
         cmpi.w  #BROWSER_ROW_DAMAGED,BROWSER_ROW_STATUS(a0)
-        beq     browser_idle
+        beq     browser_check_refused
         bsr     browser_epoch
         bne     browser_control_failed
         move.w  BROWSER_SELECTED,d0
@@ -660,6 +693,10 @@ browser_request_validation:
         clr.w   EDITOR_SESSION_BASE+REQ_LAST_RESULT
         clr.l   EDITOR_SESSION_BASE+REQ_RESULT_ID
         lea     browser_storage_request(pc),a0
+        bra.s   browser_dispatch_request
+browser_check_refused:
+        clr.w   BROWSER_ACT
+        bra     browser_idle
 browser_dispatch_request:
         lea     EDITOR_SESSION_BASE+REQ_NAME,a1
         moveq   #5,d0
@@ -669,6 +706,7 @@ browser_dispatch_request:
         move.w  #REQ_ACTION_DISPATCH,EDITOR_SESSION_BASE+REQ_ACTION
         bra     browser_finish
 
+DIALOG_LIST_CLICKS equ 1
         include "ui.s"
         include "text.s"
         include "../controller/text.s"

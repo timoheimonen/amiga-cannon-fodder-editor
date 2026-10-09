@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -98,6 +98,8 @@ edtr_open_validate:
 edtr_payload_validate:
         bsr edtr_validate
         bne edtr_return
+        ; A first entry comes from the hill or a campaign phase: load all.
+        clr.l TERRAIN_STAMP
         bsr edtr_load_assets
         bne edtr_return
         ; The resident mode 2 SPT path must have returned without
@@ -219,6 +221,12 @@ edtr_acquire_view:
         move.l #-1,TERRAIN_CURSOR_X
 .cursor_ready:
         clr.w TERRAIN_STROKE_BLOCK
+        ; The Marker tool starts with its hint in the bar.
+        clr.w TERRAIN_MARKER_HINT
+        cmpi.w #3,AUR_BASE+AUR_TOOL
+        bne.s .hint_ready
+        move.w #2,TERRAIN_MARKER_HINT
+.hint_ready:
         bsr terrain_scroll_enter
         bsr edtr_restore_camera
         bne edtr_recovery_blocked
@@ -264,7 +272,7 @@ edtr_input_actions:
         dc.w edtr_menu-edtr_input_actions
         dc.w edtr_request_tile-edtr_input_actions
         dc.w edtr_request_fill-edtr_input_actions
-        dc.w edtr_marker_warning-edtr_input_actions
+        dc.w edtr_view_idle-edtr_input_actions
         dc.w edtr_marker_limit-edtr_input_actions
         dc.w edtr_request_large-edtr_input_actions
         dc.w edtr_request_object-edtr_input_actions
@@ -277,12 +285,8 @@ edtr_request_save:
         bsr edtr_release_view
         bra.s edtr_save_released
 
-edtr_marker_warning:
-        moveq #EDTR_MARKER_WARNING,d1
-        bra.s edtr_marker_message
 edtr_marker_limit:
         moveq #EDTR_MARKER_LIMIT,d1
-edtr_marker_message:
         move.w d1,-(sp)
         bsr edtr_release_view
         move.w (sp)+,d1
@@ -524,13 +528,78 @@ edtr_assets_call:
         jsr sensi_disk_command
         tst.w d0
         bne.s edtr_assets_return
+        bsr.s terrain_stamp_check
+        beq.s .cached
         clr.b native_base_asset_cache
         clr.b native_sub_asset_cache
+.cached:
+        ; An interrupted load leaves no stamp.
+        clr.l TERRAIN_STAMP
 edtr_before_assets:
         jsr native_map_full_loaded
 edtr_after_assets:
+        bsr.s terrain_stamp_write
         moveq #0,d0
 edtr_assets_return:
+        rts
+
+; Z set when the game's terrain caches still name the last complete load and
+; its graphics and attributes are unchanged. Preserves all registers.
+terrain_stamp_check:
+        movem.l d0-d1/a0-a1,-(sp)
+        cmpi.l #TERRAIN_STAMP_TAG,TERRAIN_STAMP
+        bne.s .out
+        lea native_base_asset_cache,a0
+        lea TERRAIN_STAMP_NAMES,a1
+        moveq #7,d1
+.names:
+        cmpm.l (a0)+,(a1)+
+        dbne d1,.names
+        bne.s .out
+        bsr.s terrain_checksum
+        cmp.l TERRAIN_STAMP_SUM,d0
+.out:
+        movem.l (sp)+,d0-d1/a0-a1
+        rts
+
+; Records the stamp of the load that just completed. Preserves all registers.
+terrain_stamp_write:
+        movem.l d0-d1/a0-a1,-(sp)
+        lea native_base_asset_cache,a0
+        lea TERRAIN_STAMP_NAMES,a1
+        moveq #7,d1
+.names:
+        move.l (a0)+,(a1)+
+        dbf d1,.names
+        bsr.s terrain_checksum
+        move.l d0,TERRAIN_STAMP_SUM
+        move.l #TERRAIN_STAMP_TAG,TERRAIN_STAMP
+        movem.l (sp)+,d0-d1/a0-a1
+        rts
+
+; D0.l = checksum of the terrain graphics, palette and attributes.
+terrain_checksum:
+        movem.l d1/a0,-(sp)
+        moveq #0,d0
+        lea TERRAIN_BLK,a0
+        move.w #TERRAIN_BLK_LONGS-1,d1
+.blk:
+        add.l (a0)+,d0
+        rol.l #1,d0
+        dbf d1,.blk
+        lea TERRAIN_PALETTE,a0
+        moveq #15,d1
+.palette:
+        add.w (a0)+,d0
+        rol.l #1,d0
+        dbf d1,.palette
+        lea TERRAIN_ATTRIBUTES,a0
+        move.w #TERRAIN_ATTRIBUTE_WORDS-1,d1
+.attributes:
+        add.w (a0)+,d0
+        rol.l #1,d0
+        dbf d1,.attributes
+        movem.l (sp)+,d1/a0
         rts
 
 ; Gameplay errors and reviews are not a structural opening refusal.

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -29,6 +29,8 @@ OPN_DIRECTORY_CRC equ EDITOR_UI_BASE+64
 OPN_STATUS equ EDITOR_UI_BASE+68
 OPN_NAME equ EDITOR_UI_BASE+72
 OPN_TEXT equ EDITOR_UI_BASE+160
+; Row and field of the last click on a mission.
+OPN_CLICK equ EDITOR_UI_BASE+240
 OPN_NAMES equ OPEN_STAGE_MANIFEST
 OPN_ROWS equ OPN_NAMES+2400
 OPN_ROW_BYTES equ 68
@@ -71,12 +73,12 @@ open_refresh:
         move.w #-1,OPN_STATUS
         moveq #STORAGE_READ_INVALID,d0
         tst.w OPN_DRIVE
-        bne open_browser_ready
+        bne.s open_browser_ready
         clr.l STORAGE_CONTEXT+STORAGE_READ_CANCEL
         lea STORAGE_CONTEXT+PCREL(pc),a0
         bsr storage_inspect_disk
         tst.w d0
-        bne open_browser_ready
+        bne.s open_browser_ready
         lea STORAGE_CONTEXT+8+PCREL(pc),a0
         lea OPN_DISK_ID+PCREL(pc),a1
         moveq #14,d0
@@ -85,31 +87,8 @@ open_refresh:
         dbf d0,.inspect
         bsr open_catalog
         bne.s open_catalog_failed
-open_selection:
-        tst.w OPN_COUNT
-        beq.s open_browser_ready
-        move.w OPN_SELECTED+PCREL(pc),d0
-        lsl.w #4,d0
-        lea OPN_NAMES+PCREL(pc),a0
-        adda.w d0,a0
-        lea OPN_NAME+PCREL(pc),a1
-        moveq #3,d0
-.name:
-        move.l (a0)+,(a1)+
-        dbf d0,.name
-        bsr open_candidate
-        move.w #-1,OPN_STATUS
-        tst.w d0
-        bne.s .rebuild
-        move.w #2,OPN_STATUS
-        tst.l OPEN_STAGE_RESULT+CFVR_ERRORS
-        bne.s .rebuild
-        move.w #3,OPN_STATUS
-.rebuild:
-        ; Candidate is disposable. Rebuild names before acquiring a modal:
-        ; its paired bitmap backup owns READBACK and destroys the staged MAP.
-        bsr open_catalog
-        bne.s open_catalog_failed
+        ; A mission is checked when it is opened, not when it is selected.
+        clr.w OPN_STATUS
         bsr open_page
         beq.s open_browser_ready
 open_catalog_failed:
@@ -122,16 +101,33 @@ open_browser_ready:
         tst.w d0
         bmi open_failed
         beq open_cancel
-        cmpi.w #2,d0
-        beq open_selection
         cmpi.w #3,d0
-        beq open_refresh
+        beq.s open_refresh
         cmpi.w #4,d0
         beq open_new
         cmpi.w #5,d0
         beq open_files
+        ; Open stages and checks the whole package of the selection.
+        move.w OPN_SELECTED+PCREL(pc),d0
+        lsl.w #4,d0
+        lea OPN_NAMES+PCREL(pc),a0
+        adda.w d0,a0
+        lea OPN_NAME+PCREL(pc),a1
+        moveq #3,d0
+.name:
+        move.l (a0)+,(a1)+
+        dbf d0,.name
         bsr open_candidate
-        bne open_selection
+        beq.s .staged
+        ; A mission that cannot be opened stays selected, marked Blocked. The
+        ; candidate shared its space with the catalog, so rebuild that.
+        bsr open_catalog
+        bne.s open_catalog_failed
+        bsr open_page
+        bne.s open_catalog_failed
+        move.w #-1,OPN_STATUS
+        bra.s open_browser_ready
+.staged:
         bsr open_owner
         bne open_failed
 open_before_commit:
@@ -210,15 +206,33 @@ open_published:
 ; New keeps the current draft and directory until the ordinary guarded picker commits.
 open_new:
         bsr open_owner
-        bne.s open_blocked
+        bne open_blocked
         move.l #AUR_PAGE_MENU*$10000+AUR_CONTINUE_NEW,AUR_BASE+AUR_PAGE_KIND
         lea open_menu_request(pc),a0
         bra.s open_dispatch
 open_files:
-        bsr.s open_owner
-        bne.s open_blocked
+        bsr open_owner
+        bne open_blocked
         move.w #FILES_REQUEST_TAG,SAVE_CONTEXT
         move.w OPN_DRIVE+PCREL(pc),SAVE_CONTEXT+2
+        ; Files starts at the mission selected here.
+        lea SAVE_CONTEXT+4,a1
+        moveq #3,d0
+.none:
+        clr.l (a1)+
+        dbf d0,.none
+        tst.w OPN_COUNT
+        beq.s .request
+        move.w OPN_SELECTED+PCREL(pc),d0
+        lsl.w #4,d0
+        lea OPN_NAMES+PCREL(pc),a0
+        adda.w d0,a0
+        lea SAVE_CONTEXT+4,a1
+        moveq #3,d0
+.name:
+        move.l (a0)+,(a1)+
+        dbf d0,.name
+.request:
         move.w #AUR_PAGE_FILES,AUR_BASE+AUR_PAGE_KIND
         lea open_files_request(pc),a0
         bra.s open_dispatch
@@ -289,6 +303,7 @@ open_editor_request:
         dc.b "cf_editor.mod",0,0,0
         dc.l EDTR_MODULE_ID,EDITOR_SERIALIZER_BYTES
         include "catalog.s"
+DIALOG_LIST_CLICKS equ 1
         include "dialog.s"
         include "../dialog/dialog.s"
         include "stage.s"

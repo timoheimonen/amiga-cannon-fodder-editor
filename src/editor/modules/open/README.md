@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -48,26 +48,32 @@ package.
 `dialog.s` shows Open as a dialog of the Slave's dialog service (see
 [dialog](../dialog/README.md)). The title strip shows the `CFEDITOR` marker
 name, the line below the room left in files and bytes. Four list rows show
-title, phase count and status in columns; selecting a row validates every
-phase and shows Invalid, Review or Blocked for it, and a damaged
-manifest shows Damaged. Invalid and Review drafts can be opened; structural or
-read failures cannot, and Open is then disabled. Titles are measured in the
+title, phase count and status in columns: a damaged manifest shows Damaged,
+and a selection that Open refused shows Blocked. Selecting a row checks
+nothing; Open stages and validates every phase, opens Invalid and Review
+drafts, and marks a structural or read failure Blocked, after which Open is
+disabled for that selection. Titles are measured in the
 hill font against the limit title entry enforces (`TITLE_HILL_WIDTH`), so
 every title it accepts is listed; a row shows the first 27 characters, which
 end before the Phases column. A wider title, or one with glyphs outside the
 game font, is listed as `LONG TITLE` while its stored bytes remain unchanged.
 When no mission is listed, the list area says so.
 
-Up and Down (buttons or keys) change the selection, clamping at either end; a
-click on a row selects it. New... enters the ordinary guarded New dialog,
-Open (default, also Return) accepts, Files... enters private Delete/Recover,
-and Back or Escape cancels. New keeps the current draft and its source until
+Up and Down (buttons or keys) change the selection, clamping at either
+end; a click on a row selects it, and a double click opens it. The selection
+moves in place; another page rereads its manifests while the dialog stays
+open. New... enters the ordinary guarded New dialog, Open (default, also
+Return) accepts, Files... enters private Delete/Recover at the selected
+mission, and Back or Escape
+cancels. New keeps the current draft and its source until
 the New dialog commits. Each inspection first clears the previous private
 identity, name, capacity and catalog selection, so a rejected directory cannot
 retain the previous header or an eligible selection.
 
-The dialog closes before every file access. Selection validation discards its
-staged candidate; Open stages the whole package again before publication. No
+The dialog closes before staging. A page change reads its manifests with
+the dialog open and rebuilds the row texts, whose scratch the reads reuse,
+before any button is redrawn. Open stages the whole package before
+publication; a refused candidate is discarded and the catalog rebuilt. No
 reference to a dialog, reader scratch record or evicted overlay is retained.
 
 Publication copies the candidate into canonical allocations, resets history,

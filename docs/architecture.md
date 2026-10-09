@@ -91,8 +91,9 @@ flowchart TB
 The slave asks WHDLoad for 1 MiB of chip memory as BaseMem ($00000..$FFFFF,
 cleared at start), where the game expects to run, and for 40 KiB of ExpMem
 for the dialog service's backups. All editor code and data live in BaseMem;
-the slave keeps its own small state (a listing buffer, the CRC table, the
-remembered modules, the dialog and key state) in its own memory.
+the slave keeps its own small state (a listing buffer, the remembered
+listing of `Custom`, the CRC table, the remembered modules, the dialog and
+key state) in its own memory.
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 400}}}%%
@@ -135,7 +136,7 @@ banks without gaps:
 | I/O | $AF9E8 | 512 | Module transport request (0-63), storage request and command block (64-223), browser or authoring record (224-351), save or delete request (352-479), save preflight result (480-511) |
 | UI | $AFBE8 | 256 | Transient display state of prompts and pages |
 | SPT | $AFCE8 | 430 | The current phase's objects: up to 43 records of ten bytes |
-| Spare, guard | $AFE96 | 164 | Zero |
+| Spare, guard | $AFE96 | 164 | The terrain stamp (40 bytes), otherwise zero |
 
 | Module bank | Address | Bytes | Contents |
 | --- | --- | --- | --- |
@@ -287,9 +288,9 @@ sequenceDiagram
     participant C as controller.mod
     G->>R: click on CUSTOM at the hill ($A58F8)
     R->>B: load and enter, purpose 2
-    B->>T: a mission is selected: check it
+    B->>T: Play: check the selected mission
     T-->>B: manifest and every phase checked,<br/>the first phase staged
-    B->>C: Play
+    B->>C: start it
     Note over C: check again, set the campaign aside,<br/>start a custom campaign, retry checkpoint
     C-->>R: PREPARE
     R-->>G: the click handler returns nonzero, the hill ends
@@ -311,8 +312,9 @@ sequenceDiagram
     end
 ```
 
-Selecting a mission in the browser already loads it: `cf_storage.mod` reads
-the manifest and every phase's MAP and SPT from `Custom`, checks each by its
+Selecting a mission in the browser only moves the selection. Play (and Edit)
+first load it: `cf_storage.mod` reads the manifest and every phase's MAP and
+SPT from `Custom`, checks each by its
 length and CRC-32, its structure and its gameplay rules, and publishes the
 first phase: its map into the game's MAP buffer, its objects and settings
 into the resident. On Play the controller checks it again (the same
@@ -434,7 +436,12 @@ from the game disks) and requests `cf_editor.mod`. The editor loads the
 phase's terrain graphics by entering the game's MAP loader just after its
 file read ($86E3A): the map is already in the buffer, so the game loads the
 tile sets and attribute tables it names, and in mode 2 the SPT hook builds no
-objects. The editor then publishes its authoring record (`AUR1`,
+objects. The game skips a tile set whose name its cache still holds; the
+editor clears the two cache names unless a stamp in the spare bytes (the
+names and a checksum of the tile sets, the palette and the attribute tables,
+written after the last complete load) still matches, so Open of a mission
+with the same terrain does not decode it again, while the first entry and the
+return from Test always load it. The editor then publishes its authoring record (`AUR1`,
 `src/editor/include/authoring.i`) in place of the browser's record: the
 camera, the tool, the selected tile and object, the undo position, the
 mission's source on disk and its phases.
@@ -486,14 +493,17 @@ list `ggggggggpp.spt`, where `gggggggg` is the generation that wrote them,
 eight lowercase hexadecimal digits ([the mission format](mission-format.md)).
 
 Every operation of the slave's file service (inspect, read, create, delete)
-lists `Custom` with `resload_ListFiles` and rebuilds the directory cache: at
-most 150 files, names of 1-14 letters, digits, `.`, `-` or `_`, no two names
+checks the listing of `Custom`: at most 150 files, names of 1-14 letters, digits, `.`, `-` or `_`, no two names
 equal after case folding, every file 1-65,535 bytes, a valid `CFEDITOR` and
 no `CFSDISK`, so that a campaign save disk is never taken for `Custom`.
 Read, create and delete also require the marker's identity named in the
-request. Afterwards the service lists the directory again and reads the
+request. Afterwards the service checks the listing again and reads the
 marker; it reports success only when the directory's fingerprint (the CRC-32
-of the sorted records) and all 64 marker bytes are as expected.
+of the sorted records) and all 64 marker bytes are as expected. The slave
+lists `Custom` with `resload_ListFiles` and `resload_GetFileSize` only for
+the first operation and after each write, delete or failed operation; the
+others reuse the remembered listing, which keeps a read under a field
+instead of about 14 fields with 48 files in `Custom`.
 
 The service creates a file only under a new name. A created file is read
 back in pieces of 512 bytes and compared byte by byte, and the new listing
@@ -572,7 +582,11 @@ fixed UI palette and shows it through a copper list of its own; above and
 below the band the map stays visible, darkened, if the canvas checksum still
 matches, otherwise those rows are black. Each frame the module polls the
 dialog, which returns the chosen button, the default button for Return or
-the cancel code for Esc and the right button. A dialog starts with no key
+the cancel code for Esc and the right button. A button is chosen when the
+left button is released over it; list rows and repeating buttons act on the
+press. An underscore in a button label marks its key: the letter is drawn
+underlined and chooses the button. The cursor keys that the module leaves
+move the default frame, which Return chooses. A dialog starts with no key
 held, and closing it restores the copper list byte for byte.
 
 **Keys.** The game turns the held key into an event once per field, and the
@@ -666,17 +680,21 @@ images, reads FODDERC from disk 1's directory and sector chain, unpacks it
 checks the SHA-256 of every patch range, applies the replacements and
 appends the runtime extension. It then writes a new directory:
 `CannonFodder.slave`, `CannonFodder.info` (a project icon with the default
-tool WHDLoad and the tool types `SLAVE=`, `PRELOAD` and `NOWRITECACHE`),
+tool WHDLoad and the tool types `SLAVE=`, `PRELOAD`, `NOWRITECACHE` and
+`WRITEDELAY=10`),
 `Main.bin`, `Disk.1` to `Disk.3` (copies of the images), the formatted
 `SaveDisk`, and `Custom` with `CFEDITOR` (named `CUSTOM LEVELS` unless
 `--name` gives another) and the modules, each checked against its header.
 Every input is checked before anything is written; every file is created
 new and read back, and on an error the files the run created are removed.
 
-`NOWRITECACHE` makes every write reach the disk at once. With `PRELOAD`
-WHDLoad may keep files in memory, and the module transport checks `Custom`
-in full only on its first load and after the editor's own writes, so the
-game has to be restarted after `Custom` has been changed from outside.
+`NOWRITECACHE` makes every write reach the disk at once, and
+`WRITEDELAY=10` lets WHDLoad wait 0.2 seconds after a write instead of its
+default 3 seconds, so that a save of five files and the removal of the five
+files it replaces take seconds. With `PRELOAD` WHDLoad may keep files in
+memory, and the module transport and the file service list `Custom` in full
+only on their first use and after the editor's own writes, so the game has
+to be restarted after `Custom` has been changed from outside.
 `list`, `export` and `import` work on a `Custom` directory with the same
 rules as the slave:
 `list` shows the marker's name, the room left and each mission with the

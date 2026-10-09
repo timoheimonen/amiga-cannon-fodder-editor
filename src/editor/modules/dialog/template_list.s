@@ -1,17 +1,19 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
 ; The Template list: the game's own mission titles, eight rows at a time, then
 ; the phases of the chosen mission, with Previous, Next, Use and Back. The
-; includer defines the words TPL_PICK_PHASE (0 missions, 1 phases),
-; TPL_MISSION, TPL_PHASE and TPL_COUNT and a 64-byte EXIT_LIST, and links
-; template_lookup. The game-disk prompt below also needs the word TPL_DRIVE.
+; heading line shows the position of the selection. The includer defines the
+; words TPL_PICK_PHASE (0 missions, 1 phases), TPL_MISSION, TPL_PHASE and
+; TPL_COUNT and a 64-byte EXIT_LIST, and links template_lookup.
 TPL_ROWS            equ 8
 TPL_ROW             equ 10
 TPL_PREV            equ 20
 TPL_NEXT            equ 21
-TPL_DF0             equ 20
+TPL_UP              equ 22
+TPL_DOWN            equ 23
+TPL_PREV_BUTTON     equ 8
 
 ; Opens the list at the current choice. D0.l=0 open, otherwise refused.
 tpl_list_open:
@@ -24,6 +26,22 @@ tpl_list_open:
         moveq #0,d0
 .out:
         movem.l (sp)+,d2/a0
+        rts
+
+; Up and Down move the selection one row. D0.l=-1 when neither was
+; pressed, otherwise TPL_UP or TPL_DOWN.
+tpl_list_key:
+        moveq #TPL_UP,d0
+        cmpi.w #$CC,native_last_key
+        beq.s .key
+        moveq #TPL_DOWN,d0
+        cmpi.w #$CD,native_last_key
+        beq.s .key
+        moveq #-1,d0
+        rts
+.key:
+        clr.w native_last_key
+        tst.l d0
         rts
 
 ; D0.w polled code -> D0.l 0 cancel, 1 the phase is chosen, or -1 when the
@@ -39,13 +57,19 @@ tpl_list_event:
         tst.w d0
         beq.s .back
         cmpi.w #1,d0
-        beq.s .use
+        beq .use
         moveq #-1,d1
-        cmpi.w #TPL_PREV,d0
+        cmpi.w #TPL_UP,d0
         beq.s .step
         moveq #1,d1
-        cmpi.w #TPL_NEXT,d0
+        cmpi.w #TPL_DOWN,d0
         beq.s .step
+        moveq #-TPL_ROWS,d1
+        cmpi.w #TPL_PREV,d0
+        beq.s .page
+        moveq #TPL_ROWS,d1
+        cmpi.w #TPL_NEXT,d0
+        beq.s .page
         subi.w #TPL_ROW,d0
         move.w (a0),d1
         andi.w #-TPL_ROWS,d1
@@ -56,6 +80,7 @@ tpl_list_event:
         beq.s .use
         move.w d0,(a0)
         bra.s .redraw
+        ; The arrow keys wrap around at either end.
 .step:
         add.w (a0),d1
         bpl.s .high
@@ -68,6 +93,18 @@ tpl_list_event:
 .set:
         move.w d1,(a0)
         bra.s .redraw
+        ; Previous and Next turn the page; the selection keeps its row and
+        ; stops at the first and the last title.
+.page:
+        add.w (a0),d1
+        bpl.s .not_first
+        moveq #0,d1
+.not_first:
+        cmp.w TPL_COUNT,d1
+        blo.s .set
+        move.w TPL_COUNT,d1
+        subq.w #1,d1
+        bra.s .set
 .back:
         tst.w TPL_PICK_PHASE
         beq.s .cancel
@@ -118,8 +155,8 @@ tpl_list_draw:
         ; "Phases of " is ten cells wide; the mission title follows it.
         move.w #UI_TEXT_AT,(a0)+
         move.l #(72<<16)|46,(a0)+
-        move.l #(228<<16)|UI_INK,(a0)+
-        move.w #UI_LEFT,(a0)+
+        move.l #(180<<16)|UI_INK,(a0)+
+        move.w #UI_LEFT_CLIPPED,(a0)+
         move.w TPL_MISSION,d0
         bsr tpl_mission_title
 .heading:
@@ -132,8 +169,27 @@ tpl_list_draw:
         beq.s .current
         move.w TPL_PHASE,d6
 .current:
+        bsr tpl_position
+        ; Previous and Next while there is another page.
         move.w d6,d7
         andi.w #-TPL_ROWS,d7
+        moveq #TPL_PREV_BUTTON,d2
+        moveq #UI_DISABLED,d3
+        tst.w d7
+        beq.s .previous
+        moveq #UI_NORMAL,d3
+.previous:
+        suba.l a0,a0
+        bsr dialog_set
+        moveq #TPL_PREV_BUTTON+1,d2
+        moveq #UI_DISABLED,d3
+        move.w d7,d0
+        addq.w #TPL_ROWS,d0
+        cmp.w TPL_COUNT,d0
+        bhs.s .next
+        moveq #UI_NORMAL,d3
+.next:
+        bsr dialog_set
         moveq #0,d2
 .row:
         move.w d7,d0
@@ -149,7 +205,7 @@ tpl_list_draw:
 .title:
         tst.w TPL_PICK_PHASE
         bne.s .phase
-        bsr.s tpl_mission_title
+        bsr tpl_mission_title
         bra.s .label
 .phase:
         move.w d0,d1
@@ -159,7 +215,7 @@ tpl_list_draw:
         lea native_phase_title_table,a0
         move.l #native_phase_titles_start,d4
         move.l #native_phase_titles_end,d5
-        bsr.s tpl_table_title
+        bsr tpl_table_title
 .label:
         movea.l a1,a0
 .set:
@@ -168,6 +224,33 @@ tpl_list_draw:
         cmpi.w #TPL_ROWS,d2
         blo.s .row
         movem.l (sp)+,d0-d7/a0-a2
+        rts
+
+; "3 of 24" for the selection D6.w, right-aligned on the heading line.
+tpl_position:
+        movem.l d0/a0-a1,-(sp)
+        lea -32(sp),sp
+        movea.l sp,a0
+        move.w #UI_TEXT,(a0)+
+        move.l #(240<<16)|46,(a0)+
+        move.l #(60<<16)|UI_DIM,(a0)+
+        move.w #UI_RIGHT,(a0)+
+        move.w d6,d0
+        addq.w #1,d0
+        bsr dialog_number
+        lea tpl_of(pc),a1
+        bsr dialog_copy
+        move.w TPL_COUNT,d0
+        bsr dialog_number
+        addq.l #2,a0
+        move.l a0,d0
+        bclr #0,d0
+        movea.l d0,a0
+        clr.w (a0)
+        movea.l sp,a0
+        bsr dialog_draw
+        lea 32(sp),sp
+        movem.l (sp)+,d0/a0-a1
         rts
 
 ; D0.w mission -> A1 its title in the game's table.
@@ -229,83 +312,47 @@ tpl_missions_heading: dc.b "Choose an original mission",0
 tpl_phases_heading: dc.b "Phases of",0
 tpl_unknown: dc.b "?",0
 tpl_none: dc.b 0
-tpl_prev_label: dc.b "Previous",0
-tpl_next_label: dc.b "Next",0
-tpl_use_label: dc.b "Use",0
+tpl_of: dc.b " of ",0
+tpl_prev_label: dc.b "_Previous",0
+tpl_next_label: dc.b "_Next",0
+tpl_use_label: dc.b "_Use",0
 tpl_back_label: dc.b "Back",0
         
-; Game disk prompt: DF0..DF3 (the chosen one selected), Retry and Cancel.
-; Drive buttons DF0..DF3 (indices 0..3), the chosen one selected.
-tpl_drive_draw:
-        movem.l d0-d3/a0,-(sp)
-        moveq #0,d2
-.drive:
-        moveq #UI_NORMAL,d3
-        cmp.w TPL_DRIVE,d2
-        bne.s .set
-        moveq #UI_ACTIVE,d3
-.set:
-        suba.l a0,a0
-        bsr dialog_set
-        addq.w #1,d2
-        cmpi.w #4,d2
-        blo.s .drive
-        movem.l (sp)+,d0-d3/a0
-        rts
-
+; Game disk prompt: under WHDLoad the disks are the files Disk.2 and Disk.3
+; of the install. Retry and Cancel on the row of the Custom prompt.
 dlg_template_disk2:
-        dc.w 52,96,UI_ERROR
+        dc.w 52,72,UI_ERROR
         dc.l tpl_disk_title,tpl_disk2_body
-        dc.w 4,0,6
-        dc.w 16,100,68,14,TPL_DF0,UI_NORMAL
-        dc.l tpl_df0
-        dc.w 88,100,68,14,TPL_DF0+1,UI_NORMAL
-        dc.l tpl_df1
-        dc.w 160,100,68,14,TPL_DF0+2,UI_NORMAL
-        dc.l tpl_df2
-        dc.w 232,100,68,14,TPL_DF0+3,UI_NORMAL
-        dc.l tpl_df3
-        dc.w 16,132,124,14,1,UI_NORMAL
+        dc.w 0,0,2
+        dc.w 16,104,124,14,1,UI_NORMAL
         dc.l tpl_retry_label
-        dc.w 176,132,124,14,0,UI_NORMAL
+        dc.w 176,104,124,14,0,UI_NORMAL
         dc.l tpl_cancel_label
 dlg_template_disk3:
-        dc.w 52,96,UI_ERROR
+        dc.w 52,72,UI_ERROR
         dc.l tpl_disk_title,tpl_disk3_body
-        dc.w 4,0,6
-        dc.w 16,100,68,14,TPL_DF0,UI_NORMAL
-        dc.l tpl_df0
-        dc.w 88,100,68,14,TPL_DF0+1,UI_NORMAL
-        dc.l tpl_df1
-        dc.w 160,100,68,14,TPL_DF0+2,UI_NORMAL
-        dc.l tpl_df2
-        dc.w 232,100,68,14,TPL_DF0+3,UI_NORMAL
-        dc.l tpl_df3
-        dc.w 16,132,124,14,1,UI_NORMAL
+        dc.w 0,0,2
+        dc.w 16,104,124,14,1,UI_NORMAL
         dc.l tpl_retry_label
-        dc.w 176,132,124,14,0,UI_NORMAL
+        dc.w 176,104,124,14,0,UI_NORMAL
         dc.l tpl_cancel_label
 tpl_disk2_body:
         dc.w UI_TEXT,16,70,288,UI_INK,UI_LEFT
-        dc.b "The template needs game disk 2. Choose the",0
+        dc.b "The template reads game disk 2, the file Disk.2",0
         even
         dc.w UI_TEXT,16,82,288,UI_INK,UI_LEFT
-        dc.b "drive that holds it, then Retry.",0
+        dc.b "of the WHDLoad install. Check it, then Retry.",0
         even
         dc.w UI_END
 tpl_disk3_body:
         dc.w UI_TEXT,16,70,288,UI_INK,UI_LEFT
-        dc.b "The template needs game disk 3. Choose the",0
+        dc.b "The template reads game disk 3, the file Disk.3",0
         even
         dc.w UI_TEXT,16,82,288,UI_INK,UI_LEFT
-        dc.b "drive that holds it, then Retry.",0
+        dc.b "of the WHDLoad install. Check it, then Retry.",0
         even
         dc.w UI_END
-tpl_disk_title: dc.b "Game disk needed",0
-tpl_retry_label: dc.b "Retry",0
+tpl_disk_title: dc.b "Game disk could not be read",0
+tpl_retry_label: dc.b "_Retry",0
 tpl_cancel_label: dc.b "Cancel",0
-tpl_df0: dc.b "DF0",0
-tpl_df1: dc.b "DF1",0
-tpl_df2: dc.b "DF2",0
-tpl_df3: dc.b "DF3",0
         even

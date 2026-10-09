@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -24,6 +24,8 @@ BROWSER_SELECTED_NAME   equ BROWSER_STATE+76
 BROWSER_VALIDATION      equ BROWSER_STATE+92
 BROWSER_STATUS          equ BROWSER_STATE+94
 BROWSER_ERRORS          equ BROWSER_STATE+96
+; Nonzero while Play or Edit waits for the check of the selected mission.
+BROWSER_ACT             equ BROWSER_STATE+100
 BROWSER_DISPLAY_SAFE    equ BROWSER_STATE+104
 BROWSER_PAGE_COUNT      equ BROWSER_STATE+106
 BROWSER_PAGE_INDEX      equ BROWSER_STATE+108

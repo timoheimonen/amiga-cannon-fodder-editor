@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -12,6 +12,8 @@
         include "save.i"
         include "save_return.i"
         include "authoring.i"
+        include "ui.i"
+        include "dialog.i"
 save_read_context    equ EDITOR_IO_BASE+64
 save_old_generation  equ SAVE_CONTEXT+100
 save_initial_crc     equ SAVE_CONTEXT+104
@@ -190,6 +192,7 @@ cf_save_data_ready equ .return
 ; immutable until verified publication; all registers except D0 are preserved.
 cf_save_entry:
         movem.l d1-d7/a0-a6,-(sp)
+        clr.w SAVE_PANEL_OPEN
         moveq #STORAGE_READ_INVALID,d0
         cmpa.l #SAVE_CONTEXT,a0
         bne cf_save_registers
@@ -293,6 +296,7 @@ cf_save_entry:
         bne cf_save_return
         move.w #1,save_guard_installed
 .preflight:
+        bsr cf_save_panel_open
         move.w #SAVE_STAGE_PREFLIGHT,SAVE_CONTEXT+SAVE_STAGE
         bsr cf_preflight_entry
         tst.w d0
@@ -349,6 +353,7 @@ cf_save_entry:
         move.w save_required_sectors,d1
         cmp.w SAVE_PREFLIGHT_RESULT+SAVE_FREE_SECTORS,d1
         bhi cf_save_return
+        bsr cf_save_panel_close
         moveq #0,d6
 .write_phase:
         move.w d6,d0
@@ -432,6 +437,7 @@ cf_save_cleanup:
         bsr cf_cleanup_entry
         moveq #0,d0
 cf_save_return:
+        bsr cf_save_panel_close
         move.w d0,SAVE_CONTEXT+SAVE_STATUS
         tst.w save_guard_installed
         beq.s cf_save_registers
@@ -916,6 +922,8 @@ cf_save_compare:
         include "preflight.s"
         include "guarded_delete.s"
         include "cleanup.s"
+        include "progress.s"
+        include "../dialog/dialog.s"
 cf_save_end:
         ifgt cf_save_end-cf_save_start-EDITOR_SERIALIZER_BYTES
         fail "Save module exceeds serializer code budget"

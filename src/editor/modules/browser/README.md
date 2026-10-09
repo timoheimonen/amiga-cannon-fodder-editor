@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0 -->
+<!-- Cannon Fodder In-Game Level Editor V1.1 -->
 <!-- Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me> -->
 <!-- Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -17,16 +17,20 @@ detail line with the phase count and whether the manifest is damaged. The
 title strip shows the purpose (Custom levels, Editor or Interrupted saves) and
 the name stored in the `CFEDITOR` marker; below it the room left in files and
 bytes. A status line reports the storage check in words. Up and Down buttons,
-cursor keys and row clicks change the selection. The initial selection and
-every changed selection automatically request the complete storage check.
+cursor keys and row clicks change the selection in place: only the rows and
+buttons that change are redrawn, and another page rereads its four manifests
+while the list stays on screen. Selecting a mission requests no check; Play
+and Edit request the complete storage check of the selection first and go on
+by themselves when it allows them.
 
 The action row depends on the purpose:
 
-- Custom levels: Play for an eligible selection, Check otherwise, and Back.
-- Editor: Edit for a selection whose package passed the storage check, Check
-  otherwise, New..., and Back.
+- Custom levels: Play, disabled once a check refused the selection, and Back.
+- Editor: Edit, disabled once a check refused the selection, New..., and Back.
 
-Return activates the first action; Back or Escape returns to the hill. The lower
+Return or a double click on a mission (two clicks on its row within
+`DIALOG_DOUBLE_CLICK` fields) activates the first action; Back or Escape
+returns to the hill. The lower
 row offers Delete... when missions are listed and Recover... when unreferenced
 files exist; unavailable buttons are disabled. Delete... asks in a red
 confirmation (`files_ui.s`) where only a click on Delete confirms. The browser
@@ -66,9 +70,10 @@ validation alone as permission to play.
 ## Normal-Return Protocol
 
 The browser preserves session bytes 0 through 23 and 64 through the end.
-On BACK it leaves `REQ_ACTION_RETURN`. Before automatic validation or an
-explicit VALIDATE retry it marks the selection PENDING, restores the hill,
-then returns with this pointer-free request:
+On BACK it leaves `REQ_ACTION_RETURN`. Before the check that Play or Edit
+requests it marks the selection PENDING and the action as waiting
+(`BROWSER_ACT`, word 100 of the browser record), restores the hill, then
+returns with this pointer-free request:
 
 - `REQ_NAME = cf_storage.mod`, ID `STG1`, capacity 16384, action DISPATCH.
 - Storage command VALIDATE, selected phase zero and composite READY zero.
@@ -90,10 +95,12 @@ Each service result is consumed once, clearing its pending tag and session
 result tag. Success becomes INVALID when any phase has a gameplay error and
 REVIEW otherwise: every phase carries the playtest review, because static
 checks cannot prove a phase can be won. A transport error or inconsistent
-result becomes FAILED. Only NONE starts automatic validation, so
-reloading the catalog after a result cannot start a service loop. A changed
-selection or explicit VALIDATE permits another check. Clicking the already
-selected row does not change its validation state.
+result becomes FAILED. When the result allows the waiting action, the
+browser requests the controller without drawing the list again; otherwise it
+clears the waiting action and shows the result. Only a Play or Edit on an
+unchecked selection requests a check, so reloading the catalog after a result
+cannot start a service loop. A changed selection permits another check; every
+draw publishes the selected row's basename in `BROWSER_SELECTED_NAME`.
 
 A `CTRL` handback is accepted when the pending tag is `CTRL`. It preserves the
 selection's validation and aggregate error bitset and keeps the signed 16-bit
@@ -112,8 +119,8 @@ pending tag `CTRL`; word 124 of the browser record carries the authoring
 operation (0 play, 1 New, 2 Open). NEW is available in Editor purpose outside
 the recovery and error views while no custom session, campaign snapshot or
 gameplay is active. The controller independently verifies identity, directory,
-payload and display preconditions before it can emit PREPARE. Automatic
-validation is never followed by automatic PLAY.
+payload and display preconditions before it can emit PREPARE. Only a check
+that Play or Edit requested is followed by its action.
 
 A fresh entry has no recognized pending service result and resets browser
 state. Before consuming that state or owning the display, the browser inspects

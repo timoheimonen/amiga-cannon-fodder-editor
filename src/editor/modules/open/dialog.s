@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -7,8 +7,9 @@
 
 ; Open mission: a dialog of the Slave's dialog service over the darkened map.
 ; The four list rows of the current page, Up, Down, New..., Open, Files... and
-; Back. The dialog returns before every disk operation.
-; Choices: 0 cancel, 1 Open, 2 selection, 4 guarded New, 5 files.
+; Back. The selection moves in place; another page reads its manifests while
+; the dialog stays open. The dialog returns before staging a mission.
+; Choices: 0 cancel, 1 Open, 3 directory changed, 4 guarded New, 5 files.
 EXIT_UI             equ EDITOR_SERIAL_WORK_BASE+160
 OPEN_ROW_TEXT       equ EXIT_UI
 OPEN_ROW_BYTES      equ 48
@@ -35,6 +36,7 @@ edtr_modal:
         bsr open_owner
         bne open_dialog_refuse
         clr.w EXIT_CHOICE
+        move.w #-1,OPN_CLICK
         bsr open_dialog_texts
         bsr open_dialog_mask
         lea dlg_open(pc),a0
@@ -75,23 +77,43 @@ edtr_modal_idle:
         cmpi.w #OPEN_ROW,d0
         bhs.s .row
         move.w d0,EXIT_CHOICE
-        bra.s edtr_modal_finish
+        bra edtr_modal_finish
 .row:
         subi.w #OPEN_ROW,d0
         add.w OPN_TOP,d0
         cmp.w OPN_COUNT,d0
         bhs.s edtr_modal_idle
+        ; A double click on a mission opens it, like Open.
+        lea OPN_CLICK,a0
+        bsr dialog_double
+        beq.s .other
+        tst.w OPN_STATUS
+        bmi.s edtr_modal_idle
+        move.w #1,EXIT_CHOICE
+        bra.s edtr_modal_finish
+.other:
         cmp.w OPN_SELECTED,d0
-        beq.s edtr_modal_idle
+        beq edtr_modal_idle
         move.w d0,d1
         bra.s open_dialog_select
 open_dialog_move:
         add.w OPN_SELECTED,d1
         cmp.w OPN_COUNT,d1
-        bhs.s edtr_modal_idle
+        bhs edtr_modal_idle
 open_dialog_select:
         move.w d1,OPN_SELECTED
-        move.w #2,EXIT_CHOICE
+        clr.w OPN_STATUS
+        andi.w #$FFFC,d1
+        cmp.w OPN_TOP,d1
+        beq.s .shown
+        bsr open_page
+        beq.s .shown
+        move.w #3,EXIT_CHOICE
+        bra.s edtr_modal_finish
+.shown:
+        bsr open_dialog_texts
+        bsr.s open_dialog_show
+        bra edtr_modal_idle
 
 edtr_modal_finish:
         bsr dialog_close
@@ -106,8 +128,34 @@ open_dialog_refuse:
         movem.l (sp)+,d1-d7/a0-a6
         rts
 
+; Every button's state after the selection moved: rows past the list and
+; unavailable buttons disabled, the selected row active.
+open_dialog_show:
+        movem.l d0-d3/a0,-(sp)
+        bsr.s open_dialog_mask
+        move.l d2,d1
+        moveq #0,d2
+.button:
+        moveq #UI_DISABLED,d3
+        btst d2,d1
+        bne.s .set
+        moveq #UI_NORMAL,d3
+        move.w OPN_SELECTED,d0
+        sub.w OPN_TOP,d0
+        cmp.w d2,d0
+        bne.s .set
+        moveq #UI_ACTIVE,d3
+.set:
+        suba.l a0,a0
+        bsr dialog_set
+        addq.w #1,d2
+        cmpi.w #10,d2
+        blo.s .button
+        movem.l (sp)+,d0-d3/a0
+        rts
+
 ; D2.w = disabled buttons: rows past the list, Up on the first mission, Down
-; on the last, Open unless a mission is selected and openable (status 1..3).
+; on the last, Open with no mission or a Blocked one.
 open_dialog_mask:
         moveq #0,d2
         moveq #0,d0
@@ -133,10 +181,8 @@ open_dialog_mask:
 .down:
         tst.w OPN_COUNT
         beq.s .closed
-        cmpi.w #2,OPN_STATUS
-        blo.s .closed
-        cmpi.w #3,OPN_STATUS
-        bls.s .done
+        tst.w OPN_STATUS
+        bpl.s .done
 .closed:
         bset #7,d2
 .done:
@@ -153,7 +199,7 @@ open_dialog_texts:
         move.w d6,d0
         add.w OPN_TOP,d0
         cmp.w OPN_COUNT,d0
-        bhs .end
+        bhs.s .end
         movea.l a4,a0
         moveq #OPEN_TITLE_CHARS-1,d1
 .title:
@@ -188,13 +234,8 @@ open_dialog_texts:
         add.w OPN_TOP,d0
         cmp.w OPN_SELECTED,d0
         bne.s .status
-        move.w OPN_STATUS,d0
-        lea open_status_invalid(pc),a0
-        cmpi.w #2,d0
-        beq.s .status
-        lea open_status_review(pc),a0
-        cmpi.w #3,d0
-        beq.s .status
+        tst.w OPN_STATUS
+        bpl.s .status
         lea open_status_blocked(pc),a0
 .status:
         move.b (a0)+,(a1)+
@@ -312,14 +353,12 @@ open_files_text: dc.b " files and ",0
 open_bytes_text: dc.b " bytes",0
 open_status_none: dc.b 0
 open_status_damaged: dc.b "Damaged",0
-open_status_invalid: dc.b "Invalid",0
-open_status_review: dc.b "Review",0
 open_status_blocked: dc.b "Blocked",0
 open_up_label: dc.b "Up",0
 open_down_label: dc.b "Down",0
-open_new_label: dc.b "New...",0
-open_open_label: dc.b "Open",0
-open_files_label: dc.b "Files...",0
+open_new_label: dc.b "_New...",0
+open_open_label: dc.b "_Open",0
+open_files_label: dc.b "_Files...",0
 open_back_label: dc.b "Back",0
         even
 edtr_modal_end:

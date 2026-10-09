@@ -62,7 +62,7 @@ reads every file back after writing it. It creates the new directory
 | Path | Contents |
 | --- | --- |
 | `CannonFodder.slave` | The WHDLoad slave |
-| `CannonFodder.info` | The Workbench icon, with the tool types `PRELOAD NOWRITECACHE` |
+| `CannonFodder.info` | The Workbench icon, with the tool types `PRELOAD NOWRITECACHE WRITEDELAY=10` |
 | `Main.bin` | The game's main program from your disk 1 with the editor |
 | `Disk.1`, `Disk.2`, `Disk.3` | Your disk images; the game only reads them |
 | `SaveDisk` | The campaign save disk, formatted; keep it to keep your saves |
@@ -73,7 +73,7 @@ default). Copy the directory to your hard disk and start the game from its
 icon, or from the shell:
 
 ```text
-WHDLoad CannonFodder.slave PRELOAD NOWRITECACHE
+WHDLoad CannonFodder.slave PRELOAD NOWRITECACHE WRITEDELAY=10
 ```
 
 **F10** quits WHDLoad at once. A saved mission is never damaged by quitting;

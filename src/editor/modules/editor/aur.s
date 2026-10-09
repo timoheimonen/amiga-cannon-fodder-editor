@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -184,6 +184,15 @@ aur_prepare_commit:
         move.w AUR_SOURCE_REVISION(a5),d1
         addq.w #1,d1
         move.w d1,SAVE_REVISION(a0)
+        ; A Save continues after its own generation, so the mission keeps
+        ; its place in the lists; without a hint the save starts a new block.
+        move.l a0,-(sp)
+        lea AUR_SOURCE_NAME(a5),a0
+        bsr aur_manifest_name
+        movea.l (sp)+,a0
+        bne.s .ready
+        addq.l #1,d1
+        move.l d1,SAVE_GENERATION(a0)
         bra.s .ready
 .save_as:
         move.w #SAVE_KNOWN_FLAGS,SAVE_FLAGS(a0)

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -8,7 +8,7 @@
         xdef terrain_start,terrain_finish
 terrain_start:
 
-; D0.w=0 idle,1 SAVE,2 MENU,3 TILE,4 FILL,5 marker warning,6 limit,
+; D0.w=0 idle,1 SAVE,2 MENU,3 TILE,4 FILL,5 unused,6 limit,
 ; 7 large-stroke confirmation,8 object view/Undo,9 object palette,-1 invariant.
 ; For4 D0.high=seed.
 ; Other registers preserved. Function-key translated edge codes start at $D0.
@@ -82,6 +82,10 @@ terrain_input:
 .cursor:
         move.w d0,TERRAIN_CURSOR_X
         move.w d2,TERRAIN_CURSOR_Y
+        tst.w TERRAIN_MARKER_HINT
+        beq.s .hinted
+        subq.w #1,TERRAIN_MARKER_HINT
+.hinted:
         ; Marker and Inspect describe the cell; the other tools only move X/Y.
         ori.w #4,TERRAIN_BAR_DIRTY
         cmpi.w #3,AUR_BASE+AUR_TOOL
@@ -146,10 +150,11 @@ terrain_input:
         ori.w #1,TERRAIN_BAR_DIRTY
         cmpi.w #2,d1
         beq .object_page
+        ; Choosing Marker shows what markers do in the bar, not in a dialog.
         cmpi.w #3,d1
         bne .idle
-        moveq #5,d0
-        bra .return
+        move.w #2,TERRAIN_MARKER_HINT
+        bra .idle
 .marker:
         moveq #0,d0
         tst.w d3
@@ -367,6 +372,9 @@ bar_compose:
         bsr bar_append
         bra.s .phase
 .marker:
+        lea bar_marker_hint(pc),a1
+        tst.w TERRAIN_MARKER_HINT
+        bne.s .notice
         lea bar_marker_text(pc),a1
         bsr bar_append
         bsr terrain_marker_word
@@ -416,6 +424,7 @@ bar_band_extra:
 
 bar_tile_text: dc.b "Tile ",0
 bar_marker_text: dc.b "Marker class ",0
+bar_marker_hint: dc.b "Markers change enemy sight: test the phase.",0
         even
 ; Cursor bounds have been checked by terrain_input; acquire initializes0,0.
 terrain_marker_word:

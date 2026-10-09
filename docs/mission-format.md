@@ -18,8 +18,9 @@ The terrain graphics are not in a mission's files: the game loads them from
 its own disks by the names in the map.
 
 What the editor writes into the fields is the editor's behaviour, not part
-of the format. The notes on the editor describe editor version 1.0; a later
-version that writes otherwise changes only those notes. The format itself is
+of the format. The notes on the editor describe editor version 1.1; a later
+version that writes otherwise changes only those notes. (Version 1.0 picked
+the lowest free generation.) The format itself is
 version 1: `CFMI` version 1 with the schema `cannon-fodder-custom-mission-v1`.
 
 ## Overview
@@ -87,8 +88,13 @@ A mission has two numbers:
 
 **How a Save writes.** The editor:
 
-1. picks the new generation: the lowest value from `00000000` upward that is
-   not the first eight characters (in any case) of a file in `Custom`;
+1. picks the new generation, the first value that is not the first eight
+   characters (in any case) of a file in `Custom`, searching upward: for Save
+   from the old generation + 1, for a new mission and Save as from the start
+   of the next block of 65,536 generations after the highest name in `Custom`
+   that starts with eight hexadecimal digits (from `00000000` when there is
+   none). The lists sort by file name, so missions stay in the order they
+   were made;
 2. for a new mission and for Save as, picks the mission ID: it starts from 0
    for a new mission and from the source mission's ID for Save as, and counts
    up while any valid manifest in `Custom` has that ID. Save keeps the ID;

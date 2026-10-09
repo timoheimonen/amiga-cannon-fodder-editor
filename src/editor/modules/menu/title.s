@@ -1,11 +1,12 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
 ; Title entry for Save as and the mission and phase titles, a dialog of the
 ; Slave's dialog service. The title is typed on the keyboard and edited by the bounded picker
 ; engine; Space, Delete and Clear are also buttons. The game's key table gives
-; upper-case letters, digits and punctuation; Backspace and Del delete.
+; upper-case letters, digits and punctuation; Backspace and Del delete. The
+; title starts selected: typing replaces it, and Left or Right keeps it.
 MENU_TITLE_OK       equ 1
 MENU_TITLE_CANCEL   equ 2
 MENU_TITLE_SPACE    equ 3
@@ -56,6 +57,11 @@ menu_title_step:
         beq.s .typed
         cmpi.w #$C6,d1
         beq.s .typed
+        moveq #PICKER_KEEP,d0
+        cmpi.w #$CE,d1
+        beq.s .typed
+        cmpi.w #$CF,d1
+        beq.s .typed
         ; Return, Esc and other untranslated keys belong to the dialog.
         cmpi.w #$80,d1
         bhs.s .poll
@@ -99,9 +105,15 @@ menu_title_draw:
 .whole:
         lea EXIT_TEXT,a0
         bsr dialog_copy
+        ; A selected title is shown highlighted, without the cursor.
+        lea menu_title_selected(pc),a2
+        tst.w picker_selected
+        bne.s .field
         move.b #'_',(a0)+
+        lea menu_title_field(pc),a2
+.field:
         clr.b (a0)
-        lea menu_title_field(pc),a0
+        movea.l a2,a0
         bsr dialog_draw
         move.w picker_error,d0
         moveq #UI_ERROR,d4
@@ -171,6 +183,12 @@ menu_title_body:
         dc.w UI_END
 menu_title_field:
         dc.w UI_RECT,16,MENU_TITLE_FIELD_Y,272,14,UI_SHADOW
+        dc.w UI_FRAME,16,MENU_TITLE_FIELD_Y,272,14,UI_LIGHT
+        dc.w UI_TEXT_AT,20,MENU_TITLE_FIELD_Y+3,MENU_TITLE_CELLS*UI_CELL_WIDTH,UI_INK,UI_LEFT
+        dc.l EXIT_TEXT
+        dc.w UI_END
+menu_title_selected:
+        dc.w UI_RECT,16,MENU_TITLE_FIELD_Y,272,14,UI_SELECT
         dc.w UI_FRAME,16,MENU_TITLE_FIELD_Y,272,14,UI_LIGHT
         dc.w UI_TEXT_AT,20,MENU_TITLE_FIELD_Y+3,MENU_TITLE_CELLS*UI_CELL_WIDTH,UI_INK,UI_LEFT
         dc.l EXIT_TEXT

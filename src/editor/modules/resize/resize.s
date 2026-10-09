@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -285,6 +285,7 @@ resize_editor_request:
         include "map.s"
         include "spt.s"
         include "dialog.s"
+        include "../object_palette/catalog.i"
 ; WORK256..715 holds the staged placements while the dialog is open.
 EXIT_UI         equ EDITOR_UI_BASE
         include "../dialog/page.s"

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -17,6 +17,8 @@ PHL_ROW_TEXT_BYTES  equ 50
 PHL_TITLE_CHARS     equ 27
 PHL_SIZE_COLUMN     equ 31
 PHL_STATUS_Y        equ 133
+; Row and field of the last click on a phase.
+PHL_CLICK           equ EXIT_UI+124
 NEW_DIALOG_FAMILY   equ PHL_BLANK_FAMILY
 NEW_DIALOG_WIDTH    equ PHL_BLANK_WIDTH
 NEW_DIALOG_HEIGHT   equ PHL_BLANK_HEIGHT
@@ -25,6 +27,7 @@ NEW_DIALOG_PHASE    equ 1
 page_open:
         cmpi.w #AUR_CONTINUE_PHASE_BLANK,PHL_INTENT
         beq new_dialog_open
+        move.w #-1,PHL_CLICK
         ; The mission title, at most 28 characters, in the title strip.
         lea PHL_ORIGINAL+CFMD_TITLE,a1
         lea EXIT_TEXT,a0
@@ -47,6 +50,27 @@ page_open:
         rts
 
 page_step:
+        cmpi.w #AUR_CONTINUE_PHASE_BLANK,PHL_INTENT
+        beq.s .poll
+        ; Up and Down move the selection.
+        moveq #-1,d1
+        cmpi.w #$CC,native_last_key
+        beq.s .key
+        moveq #1,d1
+        cmpi.w #$CD,native_last_key
+        bne.s .poll
+.key:
+        clr.w native_last_key
+        add.w PHL_FOCUS,d1
+        bmi edtr_modal_idle
+        moveq #0,d0
+        move.b PHL_MAP+6,d0
+        cmp.w d0,d1
+        bhs edtr_modal_idle
+        clr.w PHL_STATUS
+        move.w d1,PHL_FOCUS
+        bra phl_ui_redraw
+.poll:
         bsr dialog_poll
         bmi edtr_modal_idle
         cmpi.w #AUR_CONTINUE_PHASE_BLANK,PHL_INTENT
@@ -65,6 +89,13 @@ page_step:
         cmpi.w #PHL_ROW_CODE,d0
         blo.s .action
         subi.w #PHL_ROW_CODE,d0
+        ; A double click on a phase edits it, like Edit.
+        lea PHL_CLICK,a0
+        bsr dialog_double
+        beq.s .focus
+        moveq #PHL_ACTION_CODE,d0
+        bra.s .action
+.focus:
         move.w d0,PHL_FOCUS
         bra phl_ui_redraw
 .action:
@@ -376,14 +407,14 @@ phl_body:
         dc.l EXIT_TEXT
         dc.w UI_END
 phl_heading: dc.b "Mission phases",0
-phl_label_edit: dc.b "Edit",0
-phl_label_up: dc.b "Move up",0
-phl_label_down: dc.b "Move down",0
-phl_label_delete: dc.b "Delete",0
-phl_label_copy: dc.b "Add copy",0
-phl_label_blank: dc.b "Add blank...",0
-phl_label_template: dc.b "Add template...",0
-phl_label_settings: dc.b "Settings...",0
+phl_label_edit: dc.b "_Edit",0
+phl_label_up: dc.b "Move _up",0
+phl_label_down: dc.b "Move dow_n",0
+phl_label_delete: dc.b "_Delete",0
+phl_label_copy: dc.b "Add _copy",0
+phl_label_blank: dc.b "Add _blank...",0
+phl_label_template: dc.b "Add _template...",0
+phl_label_settings: dc.b "_Settings...",0
 phl_label_done: dc.b "Done",0
 phl_label_cancel: dc.b "Cancel",0
         even

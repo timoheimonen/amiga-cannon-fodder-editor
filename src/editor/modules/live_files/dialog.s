@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -37,11 +37,11 @@ edtr_modal:
         lea dlg_files_confirm(pc),a0
         tst.w LF_MODE
         bne.s .open
-        bsr.s files_dialog_mask
+        bsr files_dialog_mask
         lea dlg_files(pc),a0
 .open:
         bsr dialog_open
-        bne.s files_dialog_refuse
+        bne files_dialog_refuse
 
 edtr_modal_idle:
         jsr wait_frame
@@ -49,6 +49,16 @@ edtr_modal_idle:
         beq.s .poll
         bsr browser_delete_check
         beq.s .keys
+        ; The check takes Esc as the deletion's cancellation; before any
+        ; file is deleted it is the dialog's Cancel or Back.
+        cmpi.w #STORAGE_READ_CANCELLED,d0
+        bne.s .failed
+        tst.w BDQ_CONTEXT+BDQ_ATTEMPTED
+        bne.s .failed
+        clr.l BDQ_CONTEXT+BDQ_CANCEL
+        moveq #0,d0
+        bra.s .choice
+.failed:
         move.w d0,LF_STATUS
         moveq #5,d0
         bra.s .choice
@@ -152,19 +162,28 @@ files_dialog_texts:
         bsr files_decimal
         bra .end
 .counts:
+        ; "5 files will be deleted.", or with several saved versions of the
+        ; mission "9 files in 2 saved versions will be deleted."
         moveq #0,d0
         move.w BDQ_CONTEXT+BDQ_FILE_COUNT,d0
         bsr files_decimal
-        lea files_counts(pc),a0
+        lea files_word_files(pc),a0
+        cmpi.w #1,BDQ_CONTEXT+BDQ_FILE_COUNT
+        bne.s .files
+        lea files_word_file(pc),a0
+.files:
+        bsr files_dialog_append
+        cmpi.w #1,BDQ_CONTEXT+BDQ_GENERATION_COUNT
+        beq.s .tail
+        lea files_in(pc),a0
         bsr files_dialog_append
         moveq #0,d0
         move.w BDQ_CONTEXT+BDQ_GENERATION_COUNT,d0
-        lea files_counts_tail(pc),a0
-        cmpi.w #1,d0
-        bne.s .plural
-        lea files_count_tail(pc),a0
-.plural:
         bsr files_decimal
+        lea files_versions(pc),a0
+        bsr files_dialog_append
+.tail:
+        lea files_deleted_tail(pc),a0
         bsr files_dialog_append
         bra.s .end
 .message:
@@ -297,9 +316,11 @@ files_position_mission: dc.b "Mission ",0
 files_position_set: dc.b "Leftover set ",0
 files_of: dc.b " of ",0
 files_none: dc.b "No files",0
-files_counts: dc.b " files in ",0
-files_counts_tail: dc.b " generations will be deleted.",0
-files_count_tail: dc.b " generation will be deleted.",0
+files_word_files: dc.b " files",0
+files_word_file: dc.b " file",0
+files_in: dc.b " in ",0
+files_versions: dc.b " saved versions",0
+files_deleted_tail: dc.b " will be deleted.",0
 files_confirm_title: dc.b "Delete files",0
 files_done_title: dc.b "Files deleted",0
 files_failed_title: dc.b "Could not delete",0
@@ -310,12 +331,12 @@ files_error_text: dc.b "The files could not be read or deleted.",0
 files_status_text: dc.b "Status ",0
 files_up_label: dc.b "Up",0
 files_down_label: dc.b "Down",0
-files_delete_label: dc.b "Delete...",0
-files_recover_label: dc.b "Recover...",0
+files_delete_label: dc.b "_Delete...",0
+files_recover_label: dc.b "_Recover...",0
 files_back_label: dc.b "Back",0
-files_delete_now_label: dc.b "Delete",0
+files_delete_now_label: dc.b "_Delete",0
 files_cancel_label: dc.b "Cancel",0
-files_ok_label: dc.b "OK",0
-files_editor_label: dc.b "Back to editor",0
+files_ok_label: dc.b "_OK",0
+files_editor_label: dc.b "_Back to editor",0
         even
 edtr_modal_end:

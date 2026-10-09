@@ -1,13 +1,22 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
-        xdef menu_phase,menu_phase_apply,menu_phase_requalified
+        xdef menu_phase,menu_settings,menu_phase_apply,menu_phase_requalified
         xdef menu_phase_media,menu_phase_inspect
+
+; Nonzero when the settings were opened from the editor menu: Done and
+; Cancel then return to the map, otherwise to Mission phases.
+MENU_SETTINGS_ORIGIN equ EDITOR_UI_BASE+12
 
 ; Internal MENU dialogs retain its existing typed page and exact owner.
 ; Only the selected CFMD is edited; no phase-list or mapping publication.
+menu_settings:
+        move.w #1,MENU_SETTINGS_ORIGIN
+        bra.s menu_phase_owner
 menu_phase:
+        clr.w MENU_SETTINGS_ORIGIN
+menu_phase_owner:
         bsr menu_owner
         bne menu_fail
         cmpi.l #AUR_PAGE_MENU*65536+AUR_PAGE_NONE,AUR_BASE+AUR_PAGE_KIND
@@ -40,7 +49,7 @@ menu_phase:
         bra.s .again
 .cancel:
         bsr phm_cancel
-        bra menu_again
+        bra.s menu_phase_return
 .error:
         bsr phm_cancel
         bra menu_title_error
@@ -61,7 +70,10 @@ menu_phase_requalified:
         bsr phm_commit
         tst.w d0
         bmi.s menu_phase_commit_error
-        bra menu_again
+menu_phase_return:
+        tst.w MENU_SETTINGS_ORIGIN
+        beq menu_phase_list
+        bra menu_cancel
 menu_phase_commit_error:
         bsr phm_cancel
         bra menu_title_error

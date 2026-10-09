@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -12,7 +12,8 @@ picker_hill_width equ PICKER_BASE+10
 picker_brief_width equ PICKER_BASE+12
 picker_length     equ PICKER_BASE+14
 picker_width      equ PICKER_BASE+16
-picker_held       equ PICKER_BASE+18
+; Nonzero while the whole begun text is selected: typing replaces it.
+picker_selected   equ PICKER_BASE+18
 picker_index      equ PICKER_BASE+20
 picker_error      equ PICKER_BASE+22
 picker_number     equ PICKER_BASE+24
@@ -24,6 +25,7 @@ PICKER_BACKSPACE  equ -1
 PICKER_CLEAR      equ -2
 PICKER_ACCEPT     equ -3
 PICKER_CANCEL     equ -4
+PICKER_KEEP       equ -5
 
         xdef text_picker_begin,text_picker_event,text_picker_end
 
@@ -32,6 +34,7 @@ PICKER_CANCEL     equ -4
 ; D0=0 success, -1 invalid arguments, -2 glyph, -3 width, -5 length.
 ; Empty input is allowed. Source is unchanged until ACCEPT. Other registers
 ; and SP are preserved; the fixed 160-byte context is scratch on failure.
+; A nonempty text starts selected.
 text_picker_begin:
         movem.l d1-d7/a0-a6,-(sp)
         clr.l picker_magic
@@ -42,7 +45,7 @@ text_picker_begin:
         tst.w d1
         beq .invalid
         cmpi.w #TITLE_HILL_WIDTH,d1
-        bhi.s .invalid
+        bhi .invalid
         cmpi.w #320,d2
         bhi.s .invalid
         move.l a0,d3
@@ -57,7 +60,7 @@ text_picker_begin:
         move.w d0,picker_limit
         move.w d1,picker_hill_width
         move.w d2,picker_brief_width
-        clr.w picker_held
+        clr.w picker_selected
         clr.w picker_error
         lea picker_edit,a1
         moveq #0,d3
@@ -72,6 +75,7 @@ text_picker_begin:
 .terminated:
         clr.b (a1)
         move.w d3,picker_length
+        move.w d3,picker_selected
         bsr picker_measure
         tst.w d0
         bne.s .return
@@ -90,6 +94,8 @@ text_picker_begin:
 ; D0.w=ASCII character or PICKER_* action. D0=0 edited,1 accepted,2 cancelled;
 ; negative statuses refuse the event without changing the source. -6 is empty.
 ; Every refused insertion leaves the editable text and width unchanged.
+; While the text is selected a character replaces it, Backspace erases it and
+; KEEP (a cursor key) only ends the selection.
 text_picker_event:
         movem.l d1-d7/a0-a6,-(sp)
         cmpi.l #PICKER_MAGIC,picker_magic
@@ -98,14 +104,18 @@ text_picker_event:
         beq .cancel
         cmpi.w #PICKER_ACCEPT,d0
         beq .accept
+        cmpi.w #PICKER_KEEP,d0
+        beq .keep
         cmpi.w #PICKER_CLEAR,d0
-        beq.s .clear
+        beq .clear
         cmpi.w #PICKER_BACKSPACE,d0
-        beq.s .backspace
+        beq .backspace
         cmpi.w #' ',d0
         blo .invalid
         cmpi.w #'~',d0
         bhi .invalid
+        tst.w picker_selected
+        bne.s .replace
         move.w picker_length,d4
         cmp.w picker_limit,d4
         bhs .length
@@ -121,12 +131,36 @@ text_picker_event:
         clr.b (a0,d4.w)
         move.w d4,picker_length
         move.w d5,picker_width
-        bra.s .return
+        bra .return
+.replace:
+        lea picker_edit,a0
+        move.w (a0),d6
+        move.w picker_length,d4
+        move.w picker_width,d5
+        move.b d0,(a0)
+        clr.b 1(a0)
+        move.w #1,picker_length
+        bsr picker_measure
+        tst.w d0
+        bne.s .restore
+        clr.w picker_selected
+        bra .return
+.restore:
+        move.w d6,picker_edit
+        move.w d4,picker_length
+        move.w d5,picker_width
+        bra .return
+.keep:
+        clr.w picker_selected
+        bra.s .measure
 .clear:
+        clr.w picker_selected
         clr.w picker_length
         clr.b picker_edit
         bra.s .measure
 .backspace:
+        tst.w picker_selected
+        bne.s .clear
         move.w picker_length,d0
         beq.s .measure
         subq.w #1,d0

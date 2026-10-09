@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -36,10 +36,7 @@ edtr_object_result:
         dc.w edtr_test_released-.actions
 .tool:
         ; Result 6: an explicit tool switch.
-        cmpi.w #3,AUR_BASE+AUR_TOOL
-        bne edtr_acquire_view
-        moveq #EDTR_MARKER_WARNING,d1
-        bra edtr_message_released
+        bra edtr_acquire_view
 .terrain_undo:
         clr.l TERRAIN_OP
         bsr terrain_context

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -19,7 +19,7 @@ EDITOR_UI_BASE               equ $0AFBE8
 EDITOR_UI_BYTES              equ $000100
 EDITOR_SPT_BASE              equ $0AFCE8
 EDITOR_SPT_BYTES             equ $0001AE
-; Unused, zero at start.
+; Zero at start; the editor keeps its terrain stamp in the first 40 bytes.
 EDITOR_SPARE_BASE            equ $0AFE96
 EDITOR_SPARE_BYTES           equ $0000A2
 EDITOR_GUARD_BASE            equ $0AFF38

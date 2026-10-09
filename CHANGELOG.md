@@ -1,5 +1,34 @@
 # Changelog
 
+## V1.1 09-10-2026
+
+- Faster: the mission lists, Open mission, Check and the menu dialogs no
+  longer read the whole `Custom` directory for every file, and the icon sets
+  `WRITEDELAY=10`, so saving a mission takes seconds instead of most of a
+  minute (raise it if your file system writes lazily).
+- The mission lists check a mission when it is played or opened, not each
+  time it is selected: moving through a list is instant and the list stays
+  on screen.
+- Choosing the Marker tool shows a hint in the information line instead of a
+  message to click away. After a won phase, Return continues with the next
+  phase. The phase settings return to Mission phases.
+- Title entry starts with the title selected, so typing replaces it. Every
+  list takes the arrow keys and a double click on a row for its main action.
+- Deletion confirmations count files and saved versions.
+- Dialogs work from the keyboard: an underlined letter chooses its button
+  (the editor menu: N, T, O, S, A, R, P, X, E, C) and the cursor keys move the
+  yellow frame that Return chooses. Buttons act when the mouse button is
+  released over them, so a press can be taken back.
+- Cancel returns to the map from every dialog the editor menu opened. The
+  menu has Settings... for the mission and phase settings.
+- A saved mission keeps its place in the lists; new missions are added at
+  the end. The Template list turns pages and shows the position. Files starts
+  at the mission selected in Open. The Resize confirmation names the objects
+  and their cells. The game-disk prompt names the install's disk files.
+- A Save names the mission before WHDLoad's dark writes. Opening a mission
+  with the same terrain no longer reloads its graphics.
+- The editor menu shows the version and the author under its title.
+
 ## V1.0 08-10-2026
 
 - The first release: an in-game level editor for Cannon Fodder, as a WHDLoad

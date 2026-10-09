@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -18,7 +18,10 @@ DIALOG_STAMP        equ 0
 ; is not released in between.
 DIALOG_OPEN         equ 1
 ; One frame of input. D0.l=-1 while no choice was made, otherwise the code
-; of the chosen button or the descriptor's cancel code.
+; of the chosen button or the descriptor's cancel code. A button is chosen
+; when the left button is released over it (list rows and repeating buttons
+; on the press), by the letter its label marks with an underscore, or by
+; Return when it holds the default frame, which the cursor keys move.
 DIALOG_POLL         equ 2
 ; Restores the display exactly as DIALOG_OPEN found it.
 DIALOG_CLOSE        equ 3
@@ -41,12 +44,14 @@ DIALOG_BUTTONS      equ 20
 DIALOG_MAX_BUTTONS  equ 32
 
 ; Button: x,y,w,h, code, state, label address. A button is chosen by a left
-; press inside its rectangle; disabled buttons are ignored. DIALOG_REPEAT in
+; click inside its rectangle; disabled buttons are ignored. DIALOG_REPEAT in
 ; the state word makes a held button repeat its code, first after
 ; DIALOG_REPEAT_DELAY frames and then every DIALOG_REPEAT_RATE frames.
 DIALOG_REPEAT       equ $100
 DIALOG_REPEAT_DELAY equ 12
 DIALOG_REPEAT_RATE  equ 4
+; Two clicks on the same list row within this many fields are a double click.
+DIALOG_DOUBLE_CLICK equ 25
 ; DIALOG_ROW draws the button as a flat list row with a left-aligned label;
 ; the selected row has state UI_ACTIVE.
 DIALOG_ROW_BIT      equ 9

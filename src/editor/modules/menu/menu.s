@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -118,6 +118,8 @@ menu_again:
         beq menu_open
         cmpi.w #8,d0
         beq menu_phase_list
+        cmpi.w #9,d0
+        beq menu_settings
         ; Unavailable actions leave every authored owner unchanged.
         moveq #EDTR_ASSET_UNPROVED,d1
 menu_message:
@@ -138,7 +140,7 @@ menu_exit:
         bsr edtr_modal
         tst.w d0
         bmi menu_fail
-        beq menu_again
+        beq menu_cancel
         cmpi.w #EDTR_CHOICE_DISCARD,d0
         beq.s menu_close
         ; The Save service alone can qualify this continuation.
@@ -205,7 +207,7 @@ menu_save_as:
         tst.w d0
         bmi menu_fail
         cmpi.w #1,d0
-        bne menu_again
+        bne.s menu_cancel
         bsr menu_owner
         bne menu_fail
         bsr menu_epoch
@@ -352,7 +354,7 @@ menu_replace:
         bra menu_prepare_save
 menu_replace_cancel:
         cmpi.w #AUR_CONTINUE_PHASE_SELECT,d6
-        blo menu_again
+        blo menu_cancel
 menu_phase_list:
         moveq #-1,d6
         bra.s menu_phase_dispatch

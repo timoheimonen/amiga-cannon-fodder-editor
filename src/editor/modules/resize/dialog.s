@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -177,8 +177,8 @@ resize_dialog_draw:
         bsr resize_find_removed
         tst.w d0
         bne.s .item
-        lea resize_object_label(pc),a1
-        bsr dialog_copy
+        ; "1 of 8: 00 SOLDIER, cell 40,22": the palette's name and the
+        ; cell, as in the Check results.
         move.w RZ_INDEX,d0
         addq.w #1,d0
         bsr dialog_number
@@ -186,19 +186,11 @@ resize_dialog_draw:
         bsr dialog_copy
         move.w RZ_COUNT,d0
         bsr dialog_number
-        lea resize_type_text(pc),a1
+        lea resize_colon_text(pc),a1
         bsr dialog_copy
         move.w 8(a4),d0
-        bsr dialog_number
-        lea resize_at_text(pc),a1
-        bsr dialog_copy
-        move.w 4(a4),d0
-        addi.w #16,d0
-        bsr dialog_number
-        lea resize_y_text(pc),a1
-        bsr dialog_copy
-        move.w 6(a4),d0
-        bsr dialog_number
+        bsr resize_type_name
+        bsr resize_cell_text
 .item:
         lea EXIT_TEXT,a1
         moveq #RZ_LINE_Y+28,d2
@@ -356,6 +348,65 @@ resize_find_removed:
         movem.l (sp)+,d5-d7/a0
         rts
 
+; D0.w object type: its name in the object palette's catalog, or its type
+; in hexadecimal when the catalog has no root of that type, at A0.
+resize_type_name:
+        movem.l d1/a1-a2,-(sp)
+        lea pal_catalog(pc),a2
+        move.w 2(a2),d1
+        lsr.w #2,d1
+        subq.w #1,d1
+.entry:
+        cmp.w (a2),d0
+        beq.s .found
+        addq.l #4,a2
+        dbf d1,.entry
+        lea resize_type_text(pc),a1
+        bsr dialog_copy
+        move.w d0,d1
+        lsr.w #4,d0
+        bsr.s .digit
+        move.w d1,d0
+        bsr.s .digit
+        clr.b (a0)
+        bra.s .out
+.digit:
+        andi.w #15,d0
+        addi.b #'0',d0
+        cmpi.b #'9',d0
+        bls.s .put
+        addq.b #'A'-'9'-1,d0
+.put:
+        move.b d0,(a0)+
+        rts
+.found:
+        lea pal_catalog(pc),a1
+        adda.w 2(a2),a1
+.name:
+        move.b (a1)+,d1
+        cmpi.b #$ff,d1
+        beq.s .end
+        move.b d1,(a0)+
+        bra.s .name
+.end:
+        clr.b (a0)
+.out:
+        movem.l (sp)+,d1/a1-a2
+        rts
+
+; ", cell X,Y" of the object record A4 at A0: its map pixel position over 16.
+resize_cell_text:
+        lea resize_cell_label(pc),a1
+        bsr dialog_copy
+        move.w 4(a4),d0
+        addi.w #16,d0
+        lsr.w #4,d0
+        bsr dialog_number
+        move.b #',',(a0)+
+        move.w 6(a4),d0
+        lsr.w #4,d0
+        bra dialog_number
+
 resize_times_text: dc.b " x ",0
 resize_cells_text: dc.b " of 7500 cells",0
 resize_to_text: dc.b "Resize to ",0
@@ -364,11 +415,10 @@ resize_keeps_text: dc.b "Every object stays on the map.",0
 resize_removes_text: dc.b "Removes ",0
 resize_objects_text: dc.b " objects outside the new size:",0
 resize_object_text: dc.b " object outside the new size:",0
-resize_object_label: dc.b "Object ",0
 resize_of_text: dc.b " of ",0
-resize_type_text: dc.b ": type ",0
-resize_at_text: dc.b " at X ",0
-resize_y_text: dc.b ", Y ",0
+resize_colon_text: dc.b ": ",0
+resize_type_text: dc.b "type ",0
+resize_cell_label: dc.b ", cell ",0
 resize_bad_text: dc.b "Object data is not consistent; nothing changed.",0
 resize_empty_text: dc.b "No object would remain; nothing changed.",0
         even
@@ -433,10 +483,10 @@ resize_confirm_title: dc.b "Resize map: confirm",0
 resize_refused_title: dc.b "Cannot resize",0
 resize_less: dc.b "-",0
 resize_more: dc.b "+",0
-resize_continue: dc.b "Continue",0
-resize_previous: dc.b "Previous",0
-resize_next: dc.b "Next",0
-resize_resize: dc.b "Resize",0
-resize_back: dc.b "Back",0
+resize_continue: dc.b "_Continue",0
+resize_previous: dc.b "_Previous",0
+resize_next: dc.b "_Next",0
+resize_resize: dc.b "_Resize",0
+resize_back: dc.b "_Back",0
 resize_cancel: dc.b "Cancel",0
         even

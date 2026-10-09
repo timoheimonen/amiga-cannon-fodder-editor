@@ -9,7 +9,7 @@ original campaign.
 Your campaign is set aside while you use the editor or play a custom mission,
 and it is restored exactly as it was when you return to the hill.
 
-This manual describes version 1.0 for WHDLoad.
+This manual describes version 1.1 for WHDLoad.
 
 ## Contents
 
@@ -62,7 +62,7 @@ directory `CannonFodder`. Copy it to your Amiga's hard drive.
 Double-click the `CannonFodder` icon, or start it from the shell:
 
 ```text
-WHDLoad CannonFodder.slave PRELOAD NOWRITECACHE
+WHDLoad CannonFodder.slave PRELOAD NOWRITECACHE WRITEDELAY=10
 ```
 
 Press **F10** at any time to quit to Workbench. Quitting never damages a saved
@@ -89,8 +89,19 @@ Everything in the editor is done with the mouse; keys are shortcuts.
   or object under the pointer.
 - **Return** chooses the button framed in yellow (the default).
 - **Esc** cancels a dialog or page. On the map it opens the editor menu.
+- An **underlined letter** in a button is its key: press the letter to choose
+  the button, for example **S** for **Save** in the menu.
+- The **arrow keys** move the yellow frame between the buttons of a dialog,
+  so that Return chooses another button. In lists the arrow keys move the
+  selection, and a **double click** on a row chooses its main action: play,
+  edit or open a mission, edit a phase, or show a problem on the map.
+- A button acts when you release the mouse button over it; move the pointer
+  off the button before releasing to take a press back. The **-** and **+**
+  buttons act at once and repeat while held.
 - Buttons light up under the pointer. Dimmed buttons are not available at the
   moment.
+- **Cancel** in a dialog that the editor menu opened returns to the map; in a
+  dialog opened from another dialog it returns to that dialog.
 - Confirmations name what they will do, and messages say what happened and
   what you can do about it.
 
@@ -102,18 +113,20 @@ Click **CUSTOM** on the hill to open the Custom levels list.
 
 The heading shows the name of your `Custom` directory and how much room is left
 in it. Each mission shows its title and number of phases. Select a mission with
-the mouse, the **Up** and **Down** buttons or the arrow keys. The selected
-mission is checked completely, and the line above the buttons shows the result:
+the mouse, the **Up** and **Down** buttons or the arrow keys.
+
+**Play** checks all files of the selected mission and then starts it. A
+mission that cannot be played is not started, and the line above the buttons
+says why:
 
 | Status | Meaning |
 | --- | --- |
-| `Review: playable, some goals need a playtest.` | No errors: the mission can be played. Every mission without errors shows this, because only playing it confirms that each phase can be won |
 | `Invalid: errors must be fixed in the editor.` | Play is blocked; open the mission in the editor and use Check to see why |
 | `Damaged mission` | Its files cannot be read; it can only be deleted |
 
 | Button | Effect |
 | --- | --- |
-| **Play** (Return) | Play the selected mission from its first phase |
+| **Play** (Return, or a double click on the mission) | Check the selected mission and play it from its first phase |
 | **Back** (Esc) | Return to the hill |
 | **Delete...** | Delete the selected mission after a confirmation |
 | **Recover...** | Available only after an interrupted save; lists the files it left behind and deletes them after a confirmation |
@@ -146,8 +159,8 @@ When a phase ends, a result dialog replaces the game's own result screen:
 | Button | Key | Effect |
 | --- | --- | --- |
 | **Retry** | R | Play the same phase again from its start |
-| **Next phase** | N | Continue with the next phase (only after a won phase) |
-| **Return to hill** | Return, Esc | End the mission and return to the hill |
+| **Next phase** | N, Return | Continue with the next phase (only after a won phase; then it is the default) |
+| **Return to hill** | Esc, Return | End the mission and return to the hill (the default when there is no next phase) |
 
 ## 3. Quick start: your first mission
 
@@ -178,8 +191,8 @@ The editor opens with a copy of that phase: its map, its objects and its
 settings. The original campaign is not changed.
 
 **4. Give the mission a name.** Press **Esc** to open the menu, choose
-**Save as...**, click **Clear**, type `RIVER RAID` on the keyboard and press
-Return. The mission is saved in `Custom`.
+**Save as...**, type `RIVER RAID` on the keyboard (typing replaces the
+selected title) and press Return. The mission is saved in `Custom`.
 
 **5. Add a second phase.** Open the menu again and choose **Mission
 phases...**, then **Add template...**. Choose the same campaign mission and its
@@ -201,8 +214,8 @@ play to abort; the editor returns exactly where you left it.
 play your mission from the start.
 
 The next time you click **EDITOR**, the list shows your missions. Select one
-and click **Edit** (or press Return) to continue working on it, or click
-**New...** to start another.
+and click **Edit** (or press Return, or double-click the mission) to continue
+working on it, or click **New...** to start another.
 
 ![The editor's mission list with two missions](screenshots/browser-editor.png)
 
@@ -347,10 +360,9 @@ position.
 ### Markers
 
 Markers are invisible cells that change where enemies can see your squad.
-Choose the **Marker** tool with **F4**. The editor first reminds you what
-markers do:
-
-![The Markers affect sight message](screenshots/marker-message.png)
+Choose the **Marker** tool with **F4**. The information line first reminds you
+what markers do (`Markers change enemy sight: test the phase.`) and shows the
+marker class of the cell once you move the pointer over the map.
 
 | Button | Effect |
 | --- | --- |
@@ -383,7 +395,8 @@ Press **Esc** on the map or click **Menu** to open the editor menu.
 ![The editor menu](screenshots/menu.png)
 
 `Unsaved changes` in the heading means the mission has changes that are not
-saved.
+saved. The second line of the heading shows the editor's version and its
+author.
 
 | Item | Effect |
 | --- | --- |
@@ -395,7 +408,12 @@ saved.
 | **Resize map...** | Change the size of the map of the phase being edited |
 | **Mission phases...** | Add, remove, reorder and set up the phases |
 | **Exit to hill** | Leave the editor and return to the hill |
+| **Settings...** | The titles and settings of the mission and of the phase being edited (see [Mission and phase settings](#mission-and-phase-settings)) |
 | **Close** (Return, Esc) | Close the menu |
+
+The underlined letters are the items' keys: **N**, **T**, **O**, **S**, **A**,
+**R**, **P**, **X**, **E** and **C**. Cancel in any of these dialogs returns
+to the map.
 
 Whenever an action would lose changes that are not saved, the editor asks
 first:
@@ -403,7 +421,7 @@ first:
 ![The Unsaved changes dialog](screenshots/unsaved.png)
 
 **Save** (the default) saves and continues, **Don't save** throws the changes
-away and continues, **Cancel** returns to the mission.
+away and continues, **Cancel** returns to the map.
 
 ### New mission
 
@@ -428,10 +446,12 @@ mission. Every cell holds the terrain's first tile.
 ### Template
 
 The Template dialog lists the 24 missions of the original campaign, eight at a
-time. **Previous** and **Next** move the selection and wrap around at either
-end. **Use** (or Return, or a click on the selected row) shows the phases of
-the selected mission, and **Use** again copies the selected phase. **Back**
-(Esc) returns from the phases to the missions, and from there cancels.
+time; the heading line shows the position of the selection (`3 of 24`).
+**Previous** and **Next** turn a page; the arrow keys move the selection one
+title and wrap around at either end. **Use** (or Return, or a click on the
+selected row) shows the phases of the selected mission, and **Use** again
+copies the selected phase. **Back** (Esc) returns from the phases to the
+missions, and from there cancels.
 
 The copy includes the phase's map, objects, objectives, titles and settings.
 The original game files are only read, never changed.
@@ -441,27 +461,29 @@ The original game files are only read, never changed.
 ![The Open mission dialog](screenshots/open.png)
 
 The list shows four missions at a time with their number of phases. The
-status of the selected mission is `Review` (no errors), `Invalid`, `Blocked`
-(its files cannot be used) or `Damaged`. Missions with errors can be opened
-so that you can fix them.
+Status column shows `Damaged` for a mission whose files cannot be read, and
+`Blocked` when Open found that the selected mission cannot be opened. Open
+checks the whole mission first; missions with errors can be opened so that
+you can fix them.
 
 | Button | Effect |
 | --- | --- |
 | **Up**, **Down** | Move the selection (also the arrow keys) |
 | **New...** | Start a new mission |
-| **Open** (Return) | Open the selected mission |
+| **Open** (Return, or a double click on the mission) | Open the selected mission |
 | **Files...** | Delete missions or recover files of interrupted saves |
 | **Back** (Esc) | Return to the mission you were editing |
 
 ### Files
 
-**Files...** manages the missions in `Custom` one at a time:
+**Files...** manages the missions in `Custom` one at a time, starting with
+the mission selected in Open:
 
 ![The Mission files dialog](screenshots/files.png)
 
 **Up** and **Down** choose the mission. **Delete...** deletes every file of
 the selected mission after a red confirmation, which names the mission and
-counts its files:
+counts its files (`5 files will be deleted.`):
 
 ![The red Delete files confirmation](screenshots/files-delete.png)
 
@@ -478,18 +500,24 @@ kind of confirmation. Nothing is ever deleted without asking.
 ### Save and Save as
 
 **Save** (the tool bar button or the menu item) writes the mission to
-`Custom`. The information line no longer shows `Unsaved` afterwards. You can
-always save, even when Check reports errors, so unfinished work is never lost.
+`Custom`. A panel names the mission while it is checked; then the screen
+stays dark for a few seconds while WHDLoad writes the files. The information
+line says `Saved.` afterwards and no longer shows `Unsaved`. You can always
+save, even when Check reports errors, so unfinished work is never lost. A
+saved mission keeps its place in the lists; new missions are added at the
+end.
 
 **Save as...** asks for a new title and saves a separate mission. The mission
 you started from stays as it was.
 
 ![Typing the title of a new mission](screenshots/save-as.png)
 
-Type the title on the keyboard. Letters are upper case; digits and the
-punctuation of the game's font can be used. **Backspace** or **Del** (or the
-**Delete** button) removes the last character, **Space** adds a space and
-**Clear** empties the field. `Width 149 of 288` shows how much of the room on
+Type the title on the keyboard. The current title is selected when the
+dialog opens: the first character you type replaces it, and the left or right
+cursor key keeps it so that you can add to its end. Letters are upper case;
+digits and the punctuation of the game's font can be used. **Backspace** or
+**Del** (or the **Delete** button) removes the last character, **Space** adds
+a space and **Clear** empties the field. `Width 149 of 288` shows how much of the room on
 the game's screens the title uses. A character that does not fit or that the
 game cannot show is refused with a red line that says why. **OK** (Return)
 accepts, **Cancel** (Esc) keeps the old title.
@@ -503,7 +531,8 @@ accepts, **Cancel** (Esc) keeps the old title.
 Set the new width and height and click **Continue**. Cells added at the right
 or bottom take the selected tile. Before anything changes, a red confirmation
 shows the new size and lists every object that would be removed because it
-lies outside the new map, one at a time with **Previous** and **Next**:
+lies outside the new map, one at a time with its name and cell
+(`1 of 14: 00 SOLDIER, cell 40,22`) and **Previous** and **Next**:
 
 ![The red Resize map confirmation listing the objects that would be removed](screenshots/resize-confirm.png)
 
@@ -530,7 +559,8 @@ Choose **Mission phases...** in the menu.
 
 The mission title is shown in the heading. Each row shows the phase number,
 its title and its map size; `editing` marks the phase open in the editor.
-Click a row to select it, then an action:
+Click a row (or use the arrow keys) to select it, then an action; a double
+click on a row edits that phase:
 
 | Button | Effect |
 | --- | --- |
@@ -556,8 +586,8 @@ phase`).
 
 ### Mission and phase settings
 
-**Settings...** shows every setting of the mission and of the phase being
-edited:
+**Settings...** (in Mission phases or in the editor menu) shows every setting
+of the mission and of the phase being edited:
 
 ![The Mission and phase settings dialog](screenshots/settings.png)
 
@@ -597,7 +627,8 @@ The other settings:
 
 The **-** and **+** buttons repeat while held and are dimmed at their limits.
 **Done** keeps the changes in the mission (save it to keep them in `Custom`);
-**Cancel** throws them away.
+**Cancel** throws them away. Both return to Mission phases, or to the map
+when the settings were opened from the editor menu.
 
 ## 10. Check and Test
 
@@ -618,9 +649,9 @@ play (`Tested`). Each row shows:
 - The place, if the problem has one: a map cell (`Cell 37,4`) or an object.
 - The problem in a few words.
 
-Click a row to see what it means and what to do about it. **Show on map**
-(Return) takes you to the place of the selected problem, also in another
-phase. **Previous** and **Next** show more problems; **Close** (Esc) returns
+Click a row (or use the arrow keys) to see what it means and what to do
+about it. **Show on map** (Return, or a double click on the row) takes you to
+the place of the selected problem, also in another phase. **Previous** and **Next** show more problems; **Close** (Esc) returns
 to the map.
 
 ![Check results with two errors: the phase asks for hostages to be rescued, but there are none](screenshots/check-error.png)
@@ -670,6 +701,12 @@ power cut or F10, the previous version of the mission stays intact. The files
 the interrupted save left behind can be deleted with **Recover...** in the
 mission lists.
 
+The icon starts WHDLoad with `WRITEDELAY=10`: after each file it writes,
+WHDLoad waits 0.2 seconds instead of its usual 3 seconds before the game goes
+on, so a save takes seconds. If your hard disk or file system writes lazily,
+raise the value in the icon's tool types, or quit with F10 before you switch
+the Amiga off.
+
 A save that does not fit is refused before anything is written, and the
 mission stays open in the editor:
 
@@ -701,7 +738,6 @@ directory has no room.
 | Unsaved changes | The action would lose changes; Save, Don't save or Cancel |
 | Save before adding a phase | The phase being edited has never been saved; save first |
 | Large change | The change cannot be undone; Continue clears the undo history |
-| Markers affect sight | A reminder when you choose the Marker tool |
 | Marker limit | The phase already has ten markers |
 | Last object | The phase must keep at least one object |
 | Object not placed | The phase has no room for the object |
@@ -709,7 +745,7 @@ directory has no room.
 | Could not delete | The files belong to the mission open in the editor, or deleting failed |
 | Not available | The action cannot be used here |
 | Terrain graphics missing | Graphics of the terrain could not be loaded; Save, Exit or Retry |
-| Game disk needed | An original game file could not be read; check `Disk.2` and `Disk.3` |
+| Game disk could not be read | Template could not read an original game file; check `Disk.2` and `Disk.3` of the install, then Retry |
 | Editor error, Status n | A file could not be read (3), written (5) or verified (13) |
 
 ## 12. Reference
@@ -725,10 +761,14 @@ directory has no room.
 | Del | Map | Delete the selected object |
 | Arrow keys | Map | Scroll one cell per press |
 | Arrow keys | Lists and pages | Move the selection or scroll; left and right change the object group |
+| Arrow keys | Dialogs | Move the yellow frame to another button (in lists: the keys the list does not use) |
+| Underlined letter | Dialogs | Choose that button (not in title entry, where letters type) |
+| Double click | Lists | Play, edit or open the mission, edit the phase, show the problem on the map |
 | Esc | Map | Open the menu |
 | Esc | Dialogs and pages | Cancel or close |
-| Return | Dialogs | Choose the default button (framed in yellow) |
-| R, N | Phase result | Retry, Next phase |
+| Return | Dialogs | Choose the framed button (the default unless the arrow keys moved the frame) |
+| Left, Right | Title entry | Keep the selected title and edit it |
+| R, N, H | Phase result | Retry, Next phase, Return to hill |
 | Esc | Play | Abort the phase |
 | F10 | Anywhere | Quit to Workbench |
 

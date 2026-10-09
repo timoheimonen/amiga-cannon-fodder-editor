@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -16,27 +16,59 @@ VDM_ROW_TEXT_BYTES  equ 50
 VDM_PLACE_END       equ 22
 VDM_DETAIL_Y        equ 151
 VDM_HINT_Y          equ 163
+; Row and field of the last click on an issue.
+VDM_CLICK           equ EXIT_UI+124
 
 ; Every text is built before the dialog opens; the rows and the header
 ; stay in place while it is open.
 page_open:
+        move.w #-1,VDM_CLICK
         bsr vdm_list_texts
         lea dlg_validation(pc),a0
         moveq #0,d2
         bsr dialog_open
         bne.s .out
-        bsr.s vdm_list_refresh
+        bsr vdm_list_refresh
         moveq #0,d0
 .out:
         rts
 
 ; A row selects; Show on map, Previous, Next and Close return 2, 1, 1, 0.
+; Up and Down move the selection on the page; a double click on an issue
+; with a place shows it on the map, like Show on map.
 page_step:
+        moveq #-1,d1
+        cmpi.w #$CC,native_last_key
+        beq.s .key
+        moveq #1,d1
+        cmpi.w #$CD,native_last_key
+        bne.s .poll
+.key:
+        clr.w native_last_key
+        add.w VDM_FOCUS,d1
+        bmi edtr_modal_idle
+        cmp.w VDM_PAGE_COUNT,d1
+        bhs edtr_modal_idle
+        move.w d1,VDM_FOCUS
+        bsr.s vdm_list_refresh
+        bra edtr_modal_idle
+.poll:
         bsr dialog_poll
         bmi edtr_modal_idle
         cmpi.w #VDM_ROW_CODE,d0
         blo.s .button
         subi.w #VDM_ROW_CODE,d0
+        lea VDM_CLICK,a0
+        bsr dialog_double
+        beq.s .focus
+        move.w d0,d1
+        lsl.w #4,d1
+        lea VDM_PAGE,a0
+        tst.b 7(a0,d1.w)
+        beq edtr_modal_idle
+        moveq #VDM_JUMP_CODE,d0
+        bra.s .finish
+.focus:
         move.w d0,VDM_FOCUS
         bsr.s vdm_list_refresh
         bra edtr_modal_idle
@@ -494,8 +526,8 @@ vdm_body:
         dc.w UI_TEXT_AT,8,32,292,UI_DIM,UI_LEFT
         dc.l VDM_TEXT
         dc.w UI_END
-vdm_show_label: dc.b "Show on map",0
-vdm_previous_label: dc.b "Previous",0
-vdm_next_label: dc.b "Next",0
-vdm_close_label: dc.b "Close",0
+vdm_show_label: dc.b "_Show on map",0
+vdm_previous_label: dc.b "_Previous",0
+vdm_next_label: dc.b "_Next",0
+vdm_close_label: dc.b "_Close",0
         even

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -113,7 +113,8 @@ browser_files_ui_confirm:
         bhi files_ui_invalid
         bsr browser_files_ui_drain
         bne files_ui_finish
-        ; Title, then "n generations, m files will be deleted."
+        ; Title, then "m files will be deleted.", with several saved
+        ; versions "m files in n saved versions will be deleted."
         lea files_ui_label_files(pc),a0
         tst.w files_ui_mission
         beq.s .heading
@@ -123,17 +124,24 @@ browser_files_ui_confirm:
         bsr browser_ui_copy
         lea browser_ui_format,a1
         moveq #0,d0
-        move.w BDQ_CONTEXT+BDQ_GENERATION_COUNT,d0
-        lea files_ui_label_generations(pc),a0
-        cmpi.w #1,d0
-        bne.s .generations
-        lea files_ui_label_generation(pc),a0
-.generations:
-        bsr browser_decimal
-        bsr browser_append
-        moveq #0,d0
         move.w BDQ_CONTEXT+BDQ_FILE_COUNT,d0
         bsr browser_decimal
+        lea files_ui_label_files_count(pc),a0
+        cmpi.w #1,BDQ_CONTEXT+BDQ_FILE_COUNT
+        bne.s .files
+        lea files_ui_label_file_count(pc),a0
+.files:
+        bsr browser_append
+        cmpi.w #1,BDQ_CONTEXT+BDQ_GENERATION_COUNT
+        beq.s .tail
+        lea files_ui_label_in(pc),a0
+        bsr browser_append
+        moveq #0,d0
+        move.w BDQ_CONTEXT+BDQ_GENERATION_COUNT,d0
+        bsr browser_decimal
+        lea files_ui_label_versions(pc),a0
+        bsr browser_append
+.tail:
         lea files_ui_label_count(pc),a0
         bsr browser_append
         clr.b (a1)
@@ -166,9 +174,11 @@ files_ui_finish:
         bra files_ui_return
 files_ui_label_files: dc.b "Delete leftover files",0
 files_ui_label_mission: dc.b "Delete mission",0
-files_ui_label_generations: dc.b " generations, ",0
-files_ui_label_generation: dc.b " generation, ",0
-files_ui_label_count: dc.b " files will be deleted.",0
+files_ui_label_files_count: dc.b " files",0
+files_ui_label_file_count: dc.b " file",0
+files_ui_label_in: dc.b " in ",0
+files_ui_label_versions: dc.b " saved versions",0
+files_ui_label_count: dc.b " will be deleted.",0
         even
 ; Delete keeps the old Yes zone on Y144-157.
 dlg_files_ui_confirm:
@@ -190,7 +200,7 @@ files_ui_body:
         dc.b "Deleted files cannot be restored.",0
         even
         dc.w UI_END
-files_ui_delete_label: dc.b "Delete",0
+files_ui_delete_label: dc.b "_Delete",0
 files_ui_cancel_label: dc.b "Cancel",0
         even
 

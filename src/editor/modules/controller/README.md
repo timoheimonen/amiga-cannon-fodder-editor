@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0 -->
+<!-- Cannon Fodder In-Game Level Editor V1.1 -->
 <!-- Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me> -->
 <!-- Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -124,8 +124,8 @@ Selection crosses the controller passes as mission/phase/map numbers with a
 distinct tag, never a pointer into an overlay. Import reads the original MAP
 and SPT from the game disks through the native logical drives, trying drives 0
 to 3 in turn, while a "Loading template" dialog is shown. If none supplies the
-files, the shared game-disk dialog names disk 2 or 3 with a drive choice (DF0
-to DF3), Retry and Cancel. The read-only original transport
+files, the shared game-disk dialog names `Disk.2` or `Disk.3` of the install
+and offers Retry and Cancel. The read-only original transport
 and bounded RNC decoder own READBACK and 400 bytes of serializer scratch. Both
 files must come from a game-disk directory with the same CRC. Authored titles
 preserve the original bytes, while recruit, rank, ammunition, aggression,

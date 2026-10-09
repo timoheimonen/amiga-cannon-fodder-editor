@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -13,7 +13,8 @@
 ; loading. Later loads trust that check and load the module by name until
 ; the file service clears whd_directory_checked (any write or delete, and any
 ; failed operation); a load that goes wrong falls back to the full check,
-; which reports the failure as before. The payload CRC of each module is
+; which reports the failure as before, and makes the file service list Custom
+; again. The payload CRC of each module is
 ; computed on its first load after a full check; when it matches the module
 ; header, the module's name, size and CRC are remembered, and later loads of
 ; it publish that CRC without reading the payload again.
@@ -292,6 +293,7 @@ whd_module_cached:
         clr.l EDITOR_IO_BASE+MODULE_IO_SIZE
         lea whd_directory_checked(pc),a0
         sf (a0)
+        bsr fs_cache_forget
         bra whd_module_list
 
 whd_module_path:

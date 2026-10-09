@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -210,15 +210,15 @@ new_dialog_width: dc.b "Width",0
 new_dialog_height: dc.b "Height",0
 new_dialog_less: dc.b "-",0
 new_dialog_more: dc.b "+",0
-new_dialog_create: dc.b "Create",0
+new_dialog_create: dc.b "_Create",0
 new_dialog_cancel: dc.b "Cancel",0
         ifd NEW_DIALOG_WITH_TEMPLATE
-new_dialog_template: dc.b "Template...",0
+new_dialog_template: dc.b "_Template...",0
         endif
-new_dialog_jungle_a: dc.b "Jungle A",0
-new_dialog_jungle_b: dc.b "Jungle B",0
-new_dialog_ice: dc.b "Ice",0
-new_dialog_desert: dc.b "Desert",0
-new_dialog_moor: dc.b "Moor",0
-new_dialog_interior: dc.b "Interior",0
+new_dialog_jungle_a: dc.b "Jungle _A",0
+new_dialog_jungle_b: dc.b "Jungle _B",0
+new_dialog_ice: dc.b "_Ice",0
+new_dialog_desert: dc.b "_Desert",0
+new_dialog_moor: dc.b "_Moor",0
+new_dialog_interior: dc.b "I_nterior",0
         even

@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0 -->
+<!-- Cannon Fodder In-Game Level Editor V1.1 -->
 <!-- Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me> -->
 <!-- Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -15,14 +15,18 @@ dialog service (see [dialogs](../dialog/README.md)). Unavailable actions
 return an explanatory message without changing authored data. A Save that
 `Custom` refused names its cause (150 files, or no room left) and the remedy;
 other failures show Editor error and the status number. Escape or Close closes
-the menu. Save and Resize dispatch their existing services by value.
+the menu. Every item has a letter key (N, T, O, S, A, R, P, X, E, C), and
+Cancel in a dialog that the menu opened returns to the map. Settings... opens
+the mission and phase settings of the phase being edited; Done and Cancel then
+return to the map, while the settings opened from Mission phases return there.
+Save and Resize dispatch their existing services by value.
 An entered MENU receipt distinguishes a clean Exit or explicit Discard from
 cancellation, failure or an unentered module load.
 
 Save as asks for a private title typed on the keyboard; Space, Delete and
 Clear are also buttons. The dialog shows the measured width against the limit
 and names a refused character. Input must fit both hill and briefing screens.
-Cancel leaves the title unchanged. Accept publishes the title as a dirty edit
+Cancel leaves the title unchanged and returns to the map. Accept publishes the title as a dirty edit
 before requesting a new mission from SAVE. A subsequent write failure retains
 that edit and the old verified source; only a successful verified receipt
 adopts the new mission. Undo is preserved.
@@ -33,7 +37,8 @@ the Slave restores the display it borrowed before every normal dispatch, and
 no file access or payload staging runs while a dialog is open.
 
 New asks Save/Discard/Cancel for unsaved work. Discard opens the New dialog
-without changing the old draft; cancelling it retains that work.
+without changing the old draft; cancelling either retains that work and returns
+to the map.
 Save continues only after its verified receipt. Accepted choices build a complete
 candidate in scratch and pass structural validation before canonical publication.
 Publication clears old undo/source state and creates a dirty one-phase mission.
@@ -53,7 +58,7 @@ requires terrain asset reload before the authored view resumes.
 Live Open can request this same New flow by returning normally with MENU page
 candidate 2. The ordinary New guard runs again for a retained dirty draft;
 verified-Save continuations are already clean and go directly to the picker.
-Cancelling keeps the old draft and returns to the menu. The draft keeps its
+Cancelling keeps the old draft and returns to the map. The draft keeps its
 source until the New picker commits a replacement.
 
 If a live game-resource load is cancelled, the menu instead shows Terrain

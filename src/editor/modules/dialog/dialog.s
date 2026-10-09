@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -31,6 +31,33 @@ dialog_call:
         move.l (sp)+,d1
         tst.l d0
         rts
+
+        ifd DIALOG_LIST_CLICKS
+; A click on list row D0.w; A0 holds the row and field of the last click.
+; D1.l=1 for a double click (the same row within DIALOG_DOUBLE_CLICK
+; fields), otherwise 0. Records the click; a double click is not counted
+; again by a third. Preserves all other registers.
+dialog_double:
+        movem.l d2-d3,-(sp)
+        move.w native_field_counter,d2
+        move.w d2,d3
+        sub.w 2(a0),d3
+        move.w d2,2(a0)
+        moveq #0,d1
+        cmp.w (a0),d0
+        bne.s .record
+        cmpi.w #DIALOG_DOUBLE_CLICK,d3
+        bhs.s .record
+        moveq #1,d1
+        move.w #-1,(a0)
+        bra.s .done
+.record:
+        move.w d0,(a0)
+.done:
+        movem.l (sp)+,d2-d3
+        tst.l d1
+        rts
+        endif
 
 ; Wait until both mouse buttons are up, so the click that closed a dialog
 ; does not reach the screen behind it, and drop pending input.

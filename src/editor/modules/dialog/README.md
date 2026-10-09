@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -25,6 +25,7 @@ second display buffer, and restores both on close.
 | | `dialog_draw` | A0: UI command list drawn into the open panel |
 | | `dialog_set` | D2.w: button index, D3.w: state, A0: new label or 0; redraws the button |
 | | `dialog_release` | Waits until both mouse buttons are up and drops pending input |
+| | `dialog_double` | With `DIALOG_LIST_CLICKS`: D0.w list row of a click, A0 the row and field of the last click. D1.l=1 for a double click (the same row within `DIALOG_DOUBLE_CLICK` fields); records the click |
 | `standard.s` | `dialog_standard_open` | D7.w: dialog kind, D6.w: signed status; opens the matching standard dialog |
 | | `dialog_copy` | A1: source, A0: destination; copies at most 63 characters and leaves A0 on the NUL |
 | | `dialog_number` | D0.w: unsigned value written in decimal at A0, which ends on the NUL |
@@ -34,7 +35,11 @@ All routines preserve every register except D0 (`dialog_copy` also moves A0).
 A caller polls once per frame after `wait_frame`, closes the dialog, then
 calls `dialog_release`. A dialog that takes typed text reads `native_last_key`
 before polling and clears the keys it consumes; Return and Esc are left to the
-service. The service's `DIALOG_SET` function changes one button's state or
+service. So are the letters and digits that button labels mark with an
+underscore (`_Save` is drawn with an underlined S and chosen by S) and the
+cursor keys that a list does not take, which move the default frame. A
+button is chosen on the release of the left button over it; list rows and
+repeating buttons act on the press. The service's `DIALOG_SET` function changes one button's state or
 label while the dialog is open (selected terrain, steppers at their limits).
 
 ## Descriptor
@@ -63,7 +68,10 @@ state `UI_ACTIVE`.
 `standard.s` holds the editor menu, Unsaved changes (with and without Don't
 save), Large change, Terrain graphics missing and the messages for marker,
 object and Save refusals, with a generic Editor error that shows the status.
-The including module defines `EXIT_TEXT` (64 bytes), `EXIT_NUMBER` (32 bytes)
+The menu's title strip has two lines: the title with the unsaved status on
+the right, then the editor's version and author; the panel is 10 lines taller
+upwards, so its buttons lie where they would under a one-line title. The
+including module defines `EXIT_TEXT` (64 bytes), `EXIT_NUMBER` (32 bytes)
 and `EXIT_LIST` (32 bytes) in its scratch for the menu's status text, numbers
 and redrawn fields. With `DIALOG_LARGE_ONLY` set only the Large change
 confirmation is assembled.

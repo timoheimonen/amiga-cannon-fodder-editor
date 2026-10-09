@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -18,6 +18,8 @@ edtr_test_receipt:
         bne.s .error
         cmpi.w #AUR_ASSETS_INCOMPLETE,AUR_ASSET_STATE(a5)
         bne edtr_receive_return
+        ; The phase was played: reload all of the terrain.
+        clr.l TERRAIN_STAMP
         moveq #3,d5
         bra.s edtr_test_cancel
 .error:

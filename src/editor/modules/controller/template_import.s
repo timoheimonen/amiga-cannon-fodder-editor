@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -172,17 +172,10 @@ template_import_prompt:
         moveq #0,d2
         bsr dialog_open
         bne.s tplp_cancelled
-        bsr tpl_drive_draw
 template_import_idle:
         jsr wait_frame
         bsr dialog_poll
         bmi.s template_import_idle
-        cmpi.w #TPL_DF0,d0
-        blo.s tplp_chosen
-        subi.w #TPL_DF0,d0
-        move.w d0,TPL_DRIVE
-        bsr tpl_drive_draw
-        bra.s template_import_idle
 tplp_chosen:
         move.w d0,-(sp)
         bsr dialog_close

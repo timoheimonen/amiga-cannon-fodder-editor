@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.0
+; Cannon Fodder In-Game Level Editor V1.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -22,7 +22,12 @@ browser_ui_qualified    equ EDITOR_UI_BASE+94
 ; reuses the area for its title once the page is closed.
 browser_ui_title        equ EDITOR_UI_BASE+96
 EXIT_LIST               equ EDITOR_UI_BASE+186
-browser_ui_end          equ EDITOR_UI_BASE+218
+; The page top and view the open list was drawn for.
+browser_ui_top          equ EDITOR_UI_BASE+218
+browser_ui_files        equ EDITOR_UI_BASE+220
+; Row and field of the last click on a mission.
+browser_ui_click        equ EDITOR_UI_BASE+222
+browser_ui_end          equ EDITOR_UI_BASE+226
 browser_ui_text         equ EDITOR_SERIAL_WORK_BASE+864
 browser_ui_format       equ EDITOR_SERIAL_WORK_BASE+928
 browser_ui_temporary_end equ EDITOR_SERIAL_WORK_BASE+992
@@ -37,6 +42,7 @@ browser_ui_enter:
         clr.w   BROWSER_UI_KIND
         clr.w   browser_ui_error_mode
         clr.w   browser_ui_qualified
+        move.w  #-1,browser_ui_click
         clr.w   native_gameplay_active
         clr.w   native_last_key
 .release:
@@ -66,10 +72,26 @@ browser_ui_close:
 .done:
         rts
 
+; The open list of the same page and view only updates the rows and
+; buttons; another page or view is redrawn in place. D7 is nonzero for the
+; update.
 browser_ui_draw:
         movem.l d0-d7/a0-a4,-(sp)
         clr.w   browser_ui_error_mode
+        moveq   #0,d7
+        cmpi.w  #BROWSER_UI_PAGE,BROWSER_UI_KIND
+        beq.s   .open
         bsr.s   browser_ui_close
+        bra.s   .title
+.open:
+        move.w  BROWSER_TOP,d0
+        cmp.w   browser_ui_top,d0
+        bne.s   .title
+        move.w  BROWSER_FILES_VIEW,d0
+        cmp.w   browser_ui_files,d0
+        bne.s   .title
+        moveq   #1,d7
+.title:
         ; Title strip.
         lea     browser_title(pc),a0
         cmpi.w  #REQ_PURPOSE_EDITOR,BROWSER_PURPOSE
@@ -172,17 +194,43 @@ browser_ui_draw:
 .new:
         lea     dlg_browser(pc),a0
         cmpi.w  #REQ_PURPOSE_EDITOR,BROWSER_PURPOSE
-        bne.s   .open
+        bne.s   .open_page
         tst.w   BROWSER_FILES_VIEW
-        bne.s   .open
+        bne.s   .open_page
         lea     dlg_browser_editor(pc),a0
         bsr     browser_can_new
-        bne.s   .open
+        bne.s   .open_page
         bset    #9,d2
-.open:
+.open_page:
+        tst.w   d7
+        beq.s   .whole
+        ; Up, Down, Delete..., Recover... and New... follow the mask.
+        move.l  d2,d6
+        moveq   #4,d2
+.mask:
+        cmpi.w  #6,d2
+        beq.s   .mask_next
+        moveq   #UI_NORMAL,d3
+        btst    d2,d6
+        beq.s   .mask_set
+        moveq   #UI_DISABLED,d3
+.mask_set:
+        movea.l a0,a2
+        suba.l  a0,a0
+        bsr     dialog_set
+        movea.l a2,a0
+.mask_next:
+        addq.w  #1,d2
+        cmpi.w  #9,d2
+        bls.s   .mask
+        bra.s   .shown
+.whole:
         bsr     dialog_open
         bne     .out
         move.w  #BROWSER_UI_PAGE,BROWSER_UI_KIND
+        move.w  BROWSER_TOP,browser_ui_top
+        move.w  BROWSER_FILES_VIEW,browser_ui_files
+.shown:
         ; Row titles, the selected one active; an empty list says so.
         moveq   #0,d2
         lea     BROWSER_ROWS,a4
@@ -224,10 +272,15 @@ browser_ui_draw:
         addq.w  #1,d2
         cmpi.w  #4,d2
         blo.s   .row
-        ; The primary action names what it does.
+        ; The primary action names what it does: Play or Edit, which check
+        ; the mission first. It is disabled when a check has refused it.
+        moveq   #UI_NORMAL,d3
+        tst.w   BROWSER_VALIDATION
+        beq.s   .label
         bsr     browser_can_action
-        lea     browser_validate_action(pc),a0
-        beq.s   .action_text
+        bne.s   .label
+        moveq   #UI_DISABLED,d3
+.label:
         lea     browser_play_action(pc),a0
         cmpi.w  #REQ_PURPOSE_EDITOR,BROWSER_PURPOSE
         bne.s   .action_text
@@ -235,18 +288,22 @@ browser_ui_draw:
 .action_text:
         tst.w   BROWSER_FILES_VIEW
         beq.s   .primary_label
+        moveq   #UI_NORMAL,d3
         lea     browser_files_delete_label(pc),a0
 .primary_label:
         moveq   #6,d2
-        moveq   #UI_NORMAL,d3
         tst.w   BROWSER_COUNT
         bne.s   .primary_set
         moveq   #UI_DISABLED,d3
 .primary_set:
         bsr     dialog_set
-        ; The status line, coloured by its meaning.
+        ; The status line, coloured by its meaning, over a cleared line.
         bsr.s   browser_ui_status
         lea     EXIT_LIST,a0
+        move.w  #UI_RECT,(a0)+
+        move.l  #(12<<16)|172,(a0)+
+        move.l  #(288<<16)|8,(a0)+
+        move.w  #UI_PANEL,(a0)+
         move.w  #UI_TEXT_AT,(a0)+
         move.l  #(12<<16)|172,(a0)+
         move.w  #288,(a0)+
@@ -344,10 +401,17 @@ browser_ui_input:
         add.w   BROWSER_TOP,d0
         cmp.w   BROWSER_COUNT,d0
         bhs.s   .none
+        ; A double click on a mission chooses the primary action.
+        lea     browser_ui_click,a0
+        bsr     dialog_double
+        bne.s   .primary
         cmp.w   BROWSER_SELECTED,d0
         beq.s   .none
         move.w  d0,BROWSER_SELECTED
         moveq   #6,d0
+        rts
+.primary:
+        moveq   #4,d0
         rts
 .none:
         moveq   #0,d0
@@ -423,7 +487,7 @@ dlg_browser_editor:
         dc.w 268,138,32,14,3,UI_NORMAL
         dc.l browser_down_label
         dc.w 16,190,94,14,4,UI_NORMAL
-        dc.l browser_validate_action
+        dc.l browser_edit_action
         dc.w 16,208,94,14,8,UI_NORMAL
         dc.l browser_delete_label
         dc.w 112,208,94,14,9,UI_NORMAL
@@ -449,7 +513,7 @@ dlg_browser:
         dc.w 268,138,32,14,3,UI_NORMAL
         dc.l browser_down_label
         dc.w 16,190,182,14,4,UI_NORMAL
-        dc.l browser_validate_action
+        dc.l browser_play_action
         dc.w 16,208,94,14,8,UI_NORMAL
         dc.l browser_delete_label
         dc.w 112,208,94,14,9,UI_NORMAL
@@ -513,18 +577,17 @@ browser_validate_failed: dc.b "The mission could not be checked.",0
 browser_validating: dc.b "Checking the mission...",0
 browser_start_error: dc.b "Could not start, status ",0
 browser_files_error_label: dc.b "File error, status ",0
-browser_validate_action: dc.b "Check",0
-browser_play_action: dc.b "Play",0
-browser_edit_action: dc.b "Edit",0
-browser_new_action: dc.b "New...",0
+browser_play_action: dc.b "_Play",0
+browser_edit_action: dc.b "_Edit",0
+browser_new_action: dc.b "_New...",0
 browser_back_action: dc.b "Back",0
 browser_files_delete_label: dc.b "Delete...",0
-browser_delete_label: dc.b "Delete...",0
-browser_recover_label: dc.b "Recover...",0
+browser_delete_label: dc.b "_Delete...",0
+browser_recover_label: dc.b "_Recover...",0
 browser_up_label: dc.b "Up",0
 browser_down_label: dc.b "Down",0
 browser_error_title: dc.b "Custom directory needs attention",0
-browser_retry_label: dc.b "Retry",0
+browser_retry_label: dc.b "_Retry",0
         even
         ifgt browser_ui_end-EDITOR_UI_BASE-EDITOR_UI_BYTES
         fail "Browser dialog state exceeds UI storage"

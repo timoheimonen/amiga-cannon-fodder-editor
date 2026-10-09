@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.0
+<!-- Cannon Fodder In-Game Level Editor V1.1
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -8,8 +8,9 @@ PHAS (`cf_phase.mod`, authoring page 12) edits a mission's one to six logical
 phases in the Mission phases dialog of the Slave's dialog service (`list.s`):
 one row per phase (number, title, size and the phase being edited), Edit,
 Move up, Move down, Delete, Add copy, Add blank..., Add template...,
-Settings..., Done (also Return) and Cancel (also Escape). Buttons that cannot
-act are disabled. Moving and deleting other phases remain private until Done;
+Settings..., Done (also Return) and Cancel (also Escape). A click or the Up
+and Down keys select a row, and a double click on it acts as Edit. Buttons
+that cannot act are disabled. Moving and deleting other phases remain private until Done;
 while such changes are pending, the actions that leave the list are disabled
 and the status line says so. Edit, Add copy, Add blank, Add template and
 Delete of the edited phase pass through the ordinary Save/Discard/Cancel
