@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.2.1 16-10-2026
+
+- `patch.py` also writes the drawer icon `CannonFodder.info` beside the new
+  install directory, so that Workbench shows the `CannonFodder` drawer
+  without Show all files. Copy both to your hard disk.
+
 ## V1.2 16-10-2026
 
 - The object page names every object without a question mark: a rocket

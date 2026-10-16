@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2
+; Cannon Fodder In-Game Level Editor V1.2.1
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -125,8 +125,8 @@ dlg_menu_body:
         dc.w UI_RECT,0,DLG_MENU_TOP+13,320,10,UI_SELECT
         dc.w UI_TEXT_AT,148,DLG_MENU_TOP+4,148,UI_ACCENT,UI_RIGHT
         dc.l EXIT_TEXT
-        dc.w UI_TEXT,8,DLG_MENU_TOP+14,288,UI_LIGHT,UI_LEFT
-        dc.b "V1.2 by Timo Heimonen (timo.heimonen@proton.me)",0
+        dc.w UI_TEXT,8,DLG_MENU_TOP+14,296,UI_LIGHT,UI_LEFT
+        dc.b "V1.2.1 by Timo Heimonen (timo.heimonen@proton.me)",0
         even
         dc.w UI_END
 

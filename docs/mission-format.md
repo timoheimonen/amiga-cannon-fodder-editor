@@ -18,7 +18,7 @@ The terrain graphics are not in a mission's files: the game loads them from
 its own disks by the names in the map.
 
 What the editor writes into the fields is the editor's behaviour, not part
-of the format. The notes on the editor describe editor version 1.2; a later
+of the format. The notes on the editor describe editor version 1.2.1; a later
 version that writes otherwise changes only those notes. (Version 1.0 picked
 the lowest free generation.) The format itself is
 version 1: `CFMI` version 1 with the schema `cannon-fodder-custom-mission-v1`.

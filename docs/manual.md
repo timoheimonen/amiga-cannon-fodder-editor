@@ -9,7 +9,7 @@ original campaign.
 Your campaign is set aside while you use the editor or play a custom mission,
 and it is restored exactly as it was when you return to the hill.
 
-This manual describes version 1.2 for WHDLoad.
+This manual describes version 1.2.1 for WHDLoad.
 
 ## Contents
 
@@ -47,11 +47,13 @@ python3 patch.py "Disk 1.adf" "Disk 2.adf" "Disk 3.adf" --output CannonFodder
 ```
 
 `patch.py` checks that the images are the supported release and creates the
-directory `CannonFodder`. Copy it to your Amiga's hard drive.
+directory `CannonFodder` and its drawer icon `CannonFodder.info` beside it.
+Copy both to your Amiga's hard drive, for example to `DH1:Games`; Workbench
+then shows the `CannonFodder` drawer.
 
 | File | Contents |
 | --- | --- |
-| `CannonFodder.slave`, `CannonFodder.info` | The WHDLoad Slave and its icon |
+| `CannonFodder.slave`, `CannonFodder.info` | The WHDLoad Slave and the game's icon |
 | `Main.bin` | The game program with the editor, made from your disk 1 |
 | `Disk.1`, `Disk.2`, `Disk.3` | Your disk images; the game only reads them |
 | `SaveDisk` | The campaign save disk; keep it to keep your campaign saves |
@@ -59,7 +61,8 @@ directory `CannonFodder`. Copy it to your Amiga's hard drive.
 
 ### Starting the game
 
-Double-click the `CannonFodder` icon, or start it from the shell:
+Open the `CannonFodder` drawer and double-click the `CannonFodder` icon in
+it, or start the game from the shell:
 
 ```text
 WHDLoad CannonFodder.slave PRELOAD NOWRITECACHE WRITEDELAY=10
