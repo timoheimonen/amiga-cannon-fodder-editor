@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.1
+; Cannon Fodder In-Game Level Editor V1.2
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -77,9 +77,9 @@ pal_catalog:
 .name0: dc.b "00 SOLDIER",-1
 .name1: dc.b "48 HOSTAGE",-1
 .name2: dc.b "05 ENEMY",-1
-.name3: dc.b "24 ENEMY?",-1
+.name3: dc.b "24 ROCKET SOLDIER",-1
 .name4: dc.b "6A LEADER",-1
-.name5: dc.b "0F ROOF?",-1
+.name5: dc.b "0F ROOF",-1
 .name6: dc.b "14 SPAWN DOOR",-1
 .name7: dc.b "18 SPAWN HOLE",-1
 .name8: dc.b "19 SPAWN DOOR2",-1
@@ -88,12 +88,12 @@ pal_catalog:
 .name11: dc.b "4B CIVIL DOOR2",-1
 .name12: dc.b "4C CIV SPEAR DOOR",-1
 .name13: dc.b "58 SPAWN DOOR3",-1
-.name14: dc.b "5A RESCUE DOOR?",-1
+.name14: dc.b "5A CIVILIAN HOME",-1
 .name15: dc.b "63 HELI CALL PAD",-1
 .name16: dc.b "64 REINF DOOR",-1
-.name17: dc.b "6C COMPUTER70?",-1
-.name18: dc.b "6D COMPUTER105?",-1
-.name19: dc.b "6E COMPUTER175?",-1
+.name17: dc.b "6C WEAK COMPUTER",-1
+.name18: dc.b "6D COMPUTER",-1
+.name19: dc.b "6E TOUGH COMPUTER",-1
 .name20: dc.b "28 E HELI GRENADE",-1
 .name21: dc.b "2A E HELI UNARMED",-1
 .name22: dc.b "2B E HELI MISSILE",-1
@@ -102,15 +102,15 @@ pal_catalog:
 .name25: dc.b "32 P HELI UNARMED",-1
 .name26: dc.b "33 P HELI MISSILE",-1
 .name27: dc.b "34 P HELI HOMING",-1
-.name28: dc.b "3F P CAR UNARMED?",-1
-.name29: dc.b "40 P CAR GUN?",-1
+.name28: dc.b "3F P JEEP",-1
+.name29: dc.b "40 P JEEP WITH GUN",-1
 .name30: dc.b "41 P TANK",-1
 .name31: dc.b "45 E TANK",-1
 .name32: dc.b "4E P TURRET 0",-1
 .name33: dc.b "4F P TURRET 1",-1
-.name34: dc.b "50 E CAR UNARMED?",-1
-.name35: dc.b "51 E CAR GUN?",-1
-.name36: dc.b "52 E VEHICLE10?",-1
+.name34: dc.b "50 E JEEP",-1
+.name35: dc.b "51 E JEEP WITH GUN",-1
+.name36: dc.b "52 E JEEP TO RIGHT",-1
 .name37: dc.b "54 E TURRET 0",-1
 .name38: dc.b "55 E TURRET 1",-1
 .name39: dc.b "66 CALL HELI5",-1
@@ -118,30 +118,30 @@ pal_catalog:
 .name41: dc.b "68 CALL HELI8",-1
 .name42: dc.b "69 E TURRET 9",-1
 .name43: dc.b "6B E HELI HOMING2",-1
-.name44: dc.b "0D SHRUB?",-1
-.name45: dc.b "0E TREE?",-1
-.name46: dc.b "10 SNOWMAN?",-1
-.name47: dc.b "11 SHRUB2?",-1
-.name48: dc.b "12 WATERFALL?",-1
-.name49: dc.b "1B DEAD SOLDIER?",-1
+.name44: dc.b "0D BUSH",-1
+.name45: dc.b "0E TREE",-1
+.name46: dc.b "10 SNOWMAN/CRATE",-1
+.name47: dc.b "11 BUSH 2",-1
+.name48: dc.b "12 WATERFALL",-1
+.name49: dc.b "1B DEAD SOLDIER",-1
 .name50: dc.b "25 GRENADES",-1
 .name51: dc.b "26 ROCKETS",-1
-.name52: dc.b "36 MINE?",-1
-.name53: dc.b "37 MINE2?",-1
-.name54: dc.b "38 SPIKE?",-1
-.name55: dc.b "3C BOILING POT?",-1
-.name56: dc.b "3D CIVILIAN?",-1
-.name57: dc.b "3E CIVILIAN2?",-1
+.name52: dc.b "36 MINE",-1
+.name53: dc.b "37 TRIP WIRE",-1
+.name54: dc.b "38 SPIKE TRAP",-1
+.name55: dc.b "3C POT/CAMPFIRE",-1
+.name56: dc.b "3D CIVILIAN",-1
+.name57: dc.b "3E CIVILIAN 2",-1
 .name58: dc.b "42 BIRD LEFT",-1
 .name59: dc.b "43 BIRD RIGHT",-1
-.name60: dc.b "44 SEAL?",-1
-.name61: dc.b "46 CIVIL SPEAR?",-1
-.name62: dc.b "53 CIVIL HIDDEN?",-1
-.name63: dc.b "5B SEAL MINE?",-1
-.name64: dc.b "5C SPIDER MINE?",-1
-.name65: dc.b "5D RANK 15",-1
-.name66: dc.b "5E ROCKET BONUS?",-1
-.name67: dc.b "5F ARMOUR BONUS?",-1
+.name60: dc.b "44 SEAL/SHEEP",-1
+.name61: dc.b "46 SPEAR CIVILIAN",-1
+.name62: dc.b "53 IDLE CIVILIAN",-1
+.name63: dc.b "5B SEAL MINE",-1
+.name64: dc.b "5C SPIDER MINE",-1
+.name65: dc.b "5D RANK BONUS",-1
+.name66: dc.b "5E HOMING BONUS",-1
+.name67: dc.b "5F ARMOUR BONUS",-1
 .name68: dc.b "60 LEADER BONUS",-1
 .name69: dc.b "62 SQUAD BONUS",-1
         even

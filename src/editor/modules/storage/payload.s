@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.1
+; Cannon Fodder In-Game Level Editor V1.2
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -219,10 +219,16 @@ cf_payload_validate:
         cmpi.w  #19,CFVR_WIDTH(a4)
         blo.s   .small_grid
         cmpi.w  #15,CFVR_HEIGHT(a4)
-        bhs.s   .cells
+        bhs.s   .width
 .small_grid:
         bset    #CFVR_E_GRID_FLOOR,d4
         PAYLOAD_FINDING CFVR_E_GRID_FLOOR|$0000
+.width:
+        ; The game draws the terrain of a map wider than 321 cells 16 rows off.
+        cmpi.w  #321,CFVR_WIDTH(a4)
+        bls.s   .cells
+        bset    #CFVR_R_WIDE_MAP,d5
+        PAYLOAD_FINDING CFVR_R_WIDE_MAP|$8000
 .cells:
         lea     96(a5),a0
         subq.w  #1,d7

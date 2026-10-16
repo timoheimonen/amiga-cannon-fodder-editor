@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.1
+<!-- Cannon Fodder In-Game Level Editor V1.2
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -126,6 +126,7 @@ to one bit; no record pointer is retained.
 | 8 | `multiple_rescue_destinations` |
 | 9 | `civilian_home_review` |
 | 10 | `runtime_playtest_required` |
+| 11 | `wide_map` |
 
 Structural return zero does **not** mean playable. A nonzero error mask is
 invalid gameplay data; without errors, the result still requires review and

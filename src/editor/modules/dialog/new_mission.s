@@ -1,10 +1,11 @@
-; Cannon Fodder In-Game Level Editor V1.1
+; Cannon Fodder In-Game Level Editor V1.2
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
 ; New mission: a dialog of the Slave's dialog service. Six terrain buttons,
 ; width and height steppers that repeat while held and are disabled at the
-; limits (19 by 15 cells at least, 7,500 cells at most), Create and Cancel;
+; limits (19 by 15 cells at least, 321 across and 7,500 cells at most; the
+; game draws wider maps wrongly at the right edge), Create and Cancel;
 ; with NEW_DIALOG_WITH_TEMPLATE also Template.... NEW_DIALOG_PHASE titles
 ; it for a blank phase. The includer defines the words NEW_DIALOG_FAMILY,
 ; _WIDTH and _HEIGHT and includes text.s.
@@ -48,11 +49,13 @@ new_dialog_event:
         lea NEW_DIALOG_WIDTH,a0
         move.w NEW_DIALOG_HEIGHT,d3
         moveq #19,d4
+        move.w #321,d1
         cmpi.w #2,d0
         blo.s .step
         lea NEW_DIALOG_HEIGHT,a0
         move.w NEW_DIALOG_WIDTH,d3
         moveq #15,d4
+        move.w #7500,d1
 .step:
         moveq #-1,d2
         btst #0,d0
@@ -62,6 +65,8 @@ new_dialog_event:
         add.w (a0),d2
         cmp.w d4,d2
         blo.s .draw
+        cmp.w d1,d2
+        bhi.s .draw
         mulu d2,d3
         cmpi.l #7500,d3
         bhi.s .draw
@@ -97,6 +102,10 @@ new_dialog_draw:
         mulu d1,d4
         cmpi.l #7500,d4
         sls d3
+        cmpi.w #321,d0
+        blo.s .wider
+        moveq #0,d3
+.wider:
         bsr new_dialog_enable
         cmpi.w #15,d1
         sne d3

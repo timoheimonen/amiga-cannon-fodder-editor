@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.1
+; Cannon Fodder In-Game Level Editor V1.2
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -6,7 +6,7 @@
         xdef new_draft_stage,new_draft_stage_end
 
 ; Build a blank mission in scratch without changing the current draft.
-; D0.l=family 0..5, D1.l=width >=19, D2.l=height >=15; at most 7500 cells.
+; D0.l=family 0..5, D1.l=width 19..321, D2.l=height >=15; at most 7500 cells.
 ; Return D0.l=0 or -1. Preserve every other register and SR control bits.
 ; Invalid arguments leave every staging byte intact. Valid output owns MAP's
 ; exact encoded length, all 430 SPT bytes and all 384 metadata bytes below.
@@ -21,7 +21,7 @@ new_draft_stage:
         bhi .reject
         cmpi.l #19,d1
         blo .reject
-        cmpi.l #500,d1
+        cmpi.l #321,d1
         bhi .reject
         cmpi.l #15,d2
         blo .reject

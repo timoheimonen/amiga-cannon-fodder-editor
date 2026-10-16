@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.1
+; Cannon Fodder In-Game Level Editor V1.2
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -446,12 +446,13 @@ vdm_reviews:
         dc.w .s8-vdm_reviews,.d8-vdm_reviews
         dc.w .s9-vdm_reviews,.d9-vdm_reviews
         dc.w .s10-vdm_reviews,.d10-vdm_reviews
+        dc.w .s11-vdm_reviews,.d11-vdm_reviews
 .s0: dc.b "Tile 399 has no graphics",0
-.d0: dc.b "The game draws garbage there. Use another tile.",0
+.d0: dc.b "It has no graphics of its own. Use another tile.",0
 .s1: dc.b "Reserved cell bits set",0
-.d1: dc.b "Imported cell bits that the game does not use.",0
+.d1: dc.b "Imported bits that disturb the line of sight.",0
 .s2: dc.b "Marker class 5 to 7",0
-.d2: dc.b "Marker classes 5 to 7 have no known effect.",0
+.d2: dc.b "Classes 5 to 7 play no sound. Use 1 to 4.",0
 .s3: dc.b "Marker affects sight",0
 .d3: dc.b "Markers change line of sight. Test the phase.",0
 .s4: dc.b "Object outside the map",0
@@ -468,6 +469,8 @@ vdm_reviews:
 .d9: dc.b "Test the civilian's way home, and its death.",0
 .s10: dc.b "Play once to confirm",0
 .d10: dc.b "Some things are only confirmed by playing.",0
+.s11: dc.b "Map wider than 321",0
+.d11: dc.b "Its right part is drawn wrong. Resize the map.",0
         even
 vdm_structural:
         dc.w .s0-vdm_structural,.d0-vdm_structural

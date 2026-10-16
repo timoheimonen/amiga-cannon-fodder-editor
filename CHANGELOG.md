@@ -1,5 +1,18 @@
 # Changelog
 
+## V1.2 16-10-2026
+
+- The object page names every object without a question mark: a rocket
+  soldier, jeeps, a trip wire, a spike trap, an idle civilian and so on;
+  names such as `SNOWMAN/CRATE` give the pictures of different terrains.
+  `docs/mission-format.md` describes what each object does.
+- Check explains tile 399, reserved cell bits and marker classes 5-7 more
+  exactly.
+- New mission and Resize map keep a map at most 321 cells wide: the game
+  draws the terrain of a wider map 16 rows too low at its right edge. Check
+  lists a wider map as `Map wider than 321` to review; it can still be
+  played.
+
 ## V1.1 09-10-2026
 
 - Faster: the mission lists, Open mission, Check and the menu dialogs no
