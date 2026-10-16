@@ -685,6 +685,9 @@ tool WHDLoad and the tool types `SLAVE=`, `PRELOAD`, `NOWRITECACHE` and
 `Main.bin`, `Disk.1` to `Disk.3` (copies of the images), the formatted
 `SaveDisk`, and `Custom` with `CFEDITOR` (named `CUSTOM LEVELS` unless
 `--name` gives another) and the modules, each checked against its header.
+Beside the directory it writes the drawer icon `CannonFodder.info` (named
+after the directory, with the same picture), without which Workbench shows
+the drawer only with Show all files.
 Every input is checked before anything is written; every file is created
 new and read back, and on an error the files the run created are removed.
 

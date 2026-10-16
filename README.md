@@ -57,20 +57,21 @@ python3 patch.py "Disk 1.adf" "Disk 2.adf" "Disk 3.adf" --output CannonFodder
 The images can be given in any order. `patch.py` checks every image and
 every byte it changes before it writes anything, only reads the images, and
 reads every file back after writing it. It creates the new directory
-`CannonFodder`:
+`CannonFodder` and, beside it, its drawer icon `CannonFodder.info`, so that
+Workbench shows the drawer:
 
 | Path | Contents |
 | --- | --- |
 | `CannonFodder.slave` | The WHDLoad slave |
-| `CannonFodder.info` | The Workbench icon, with the tool types `PRELOAD NOWRITECACHE WRITEDELAY=10` |
+| `CannonFodder.info` | The game's Workbench icon, with the tool types `PRELOAD NOWRITECACHE WRITEDELAY=10` |
 | `Main.bin` | The game's main program from your disk 1 with the editor |
 | `Disk.1`, `Disk.2`, `Disk.3` | Your disk images; the game only reads them |
 | `SaveDisk` | The campaign save disk, formatted; keep it to keep your saves |
 | `Custom/` | The editor's modules, its marker file `CFEDITOR` and your missions |
 
 `--name` sets the name the editor shows for `Custom` (`CUSTOM LEVELS` by
-default). Copy the directory to your hard disk and start the game from its
-icon, or from the shell:
+default). Copy the directory and its drawer icon to your hard disk, open the
+drawer and start the game from its icon, or from the shell:
 
 ```text
 WHDLoad CannonFodder.slave PRELOAD NOWRITECACHE WRITEDELAY=10
@@ -79,7 +80,8 @@ WHDLoad CannonFodder.slave PRELOAD NOWRITECACHE WRITEDELAY=10
 **F10** quits WHDLoad at once. A saved mission is never damaged by quitting;
 unsaved changes are lost.
 
-`patch.py` always writes a new directory and never changes an existing one.
+`patch.py` always writes a new directory and a new drawer icon and never
+changes an existing file.
 To move your missions to another install, copy their files from `Custom` or
 use the mission commands:
 
