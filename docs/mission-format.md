@@ -18,7 +18,7 @@ The terrain graphics are not in a mission's files: the game loads them from
 its own disks by the names in the map.
 
 What the editor writes into the fields is the editor's behaviour, not part
-of the format. The notes on the editor describe editor version 1.1; a later
+of the format. The notes on the editor describe editor version 1.2; a later
 version that writes otherwise changes only those notes. (Version 1.0 picked
 the lowest free generation.) The format itself is
 version 1: `CFMI` version 1 with the schema `cannon-fodder-custom-mission-v1`.
@@ -238,11 +238,11 @@ objects, objectives, titles and settings.
 | 1 | Kill all enemy | Every counted enemy must die |
 | 2 | Destroy buildings | Every counted building must be destroyed |
 | 3 | Rescue hostages | Every hostage must be brought to the rescue tent |
-| 4 | Protect civilians | A civilian's death fails the phase |
+| 4 | Protect civilians | A civilian's death, or a destroyed door that civilians come out of, fails the phase |
 | 5 | Kidnap enemy leader | The enemy leader must be brought to the rescue tent |
 | 6 | Destroy factory | Shown in the briefing only: 1 and 2 decide when the phase is complete |
 | 7 | Destroy computer | As 6, and the phase needs a computer to destroy |
-| 8 | Get civilian home | A civilian must reach the civilian home |
+| 8 | Get civilian home | A civilian must reach the civilian home; a civilian's death fails the phase |
 
 A phase is complete when all its objectives are met. 4, 6 and 7 cannot end
 a phase by themselves, so a phase needs 1, 2, 3, 5 or 8, and 6 and 7 need
@@ -272,11 +272,11 @@ The map is a 96-byte header and the cells:
 | --- | ---: | --- | --- | --- |
 | `$00` | 16 | Base tileset name | The [terrain pair](#terrain-pairs)'s base name, a NUL, then any bytes | The name with `.blk`, zero padding |
 | `$10` | 16 | Sub tileset name | The pair's sub name, the same way | The name with `.blk`, zero padding |
-| `$20` | 48 | Other | Not checked; write 0 | 0 in a new map; kept |
-| `$50` | 4 | Signature | `cfed` (`63 66 65 64`) | `cfed` |
-| `$54` | 2 | Width | Cells across, not 0 | 19 or more |
+| `$20` | 48 | Unused | Not read by the game or checked; write 0 | 0 in a new map; kept |
+| `$50` | 4 | Signature | `cfed` (`63 66 65 64`). The game does not read it; the checks require it | `cfed` |
+| `$54` | 2 | Width | Cells across, not 0 | 19-321 |
 | `$56` | 2 | Height | Cells down, not 0 | 15 or more |
-| `$58` | 8 | Other | Not checked; write 0 | 0 in a new map; kept |
+| `$58` | 8 | Unused | Not read by the game or checked; write 0 | 0 in a new map; kept |
 | `$60` | 2 x cells | Cells | One word per cell, see below | |
 
 The cells are stored row by row: cell (*x*, *y*) is the word at
@@ -286,8 +286,17 @@ width * 16 by height * 16 pixels.
 **Size.** The file is exactly 96 + 2 * width * height bytes. Width and height
 are not 0, and width * height is at most 7,500 cells, which makes at most
 15,096 bytes. A map narrower than 19 cells or lower than 15 is a gameplay
-error: the editor can open and save it, not play it. The editor's New and
-Resize dialogs keep 19 x 15 and more and 7,500 cells at most.
+error: the editor can open and save it, not play it. The game draws a map
+at most 321 cells wide correctly: on a wider map, the terrain from map X
+5,120 on appears 16 rows too low. The height has no such limit. The
+editor's New and Resize dialogs keep 19-321 cells across, 15 or more down
+and 7,500 cells at most, and the Check lists a wider map as the review item
+`Map wider than 321`, so write at most 321.
+
+**What the game shows.** The game shows 272 x 224 map pixels at a time. It
+never shows the first and the last column of cells; every row can be seen.
+A map of exactly 19 x 15 cells does not scroll, and a map 19 cells wide
+scrolls only up and down.
 
 ### Terrain pairs
 
@@ -306,28 +315,39 @@ supported:
 
 Each name is written in lower case exactly as shown, either alone or with
 `.blk` (`junbase` or `junbase.blk`), and ends with a NUL inside its 16 bytes.
-The bytes after the NUL are not checked; the editor writes zeros there in a
-new map and keeps them otherwise.
+The bytes after the NUL are not read by the game or checked; the editor
+writes zeros there in a new map and keeps them otherwise.
 
 ### Cells
 
 | Bits | Mask | Field | Values |
 | --- | --- | --- | --- |
-| 0-8 | `$01FF` | Tile | 0-398: a tile of the terrain pair. 399: no graphics, a review item. 400-511: an error |
-| 9-12 | `$1E00` | Reserved | Write 0; set bits are a review item |
-| 13-15 | `$E000` | Marker class | 0: no marker. 1-4: the classes the editor sets. 5-7: a review item |
+| 0-8 | `$01FF` | Tile | 0-398: a tile of the terrain pair. 399: the slot after the terrain's tiles, with no graphics of its own (blank under WHDLoad), a review item. 400-511: an error |
+| 9-12 | `$1E00` | Reserved | Write 0. The game ignores them for the picture and the ground, but they disturb its line of sight test; set bits are a review item |
+| 13-15 | `$E000` | Marker class | 0: no marker. 1-4: a background sound marker, the classes the editor sets. 5-7: a marker without a sound, a review item |
 
 The tile gives the cell's picture and how the game treats it (ground,
 water, blocked and so on). The editor's tile page offers the 399 tiles
 0-398 of each terrain.
 
 **Markers.** A cell with a nonzero marker class is a marker. Markers are
-invisible and can change where enemies see the squad. The game collects at
-most ten marker cells, so more than ten is an error. The editor's Marker
-tool steps a cell through classes 1-4 and changes only bits 13-15; Paint and
-Fill change only bits 0-8. Classes 5-7 have no known use and are a review
-item, and for classes 1, 2, 3, 5, 6 and 7, which change the game's line of
-sight test, the Check asks for a test play.
+invisible and choose the background sound: within 9 cells of the leader of
+the selected squad, the nearest marker of class 1-4 plays sound 1-4 of the
+terrain's background sounds, at full volume within 4 cells and more quietly
+farther away; elsewhere sound 1 plays quietly. Markers of classes 5-7 play
+nothing. The game collects at most ten marker cells, so more than ten is an
+error.
+
+The marker class also changes the game's line of sight test, with which
+enemies and others decide whether they can see a target. The test reads the
+whole cell word: a cell of class 0 or 4 blocks sight when its tile does,
+but for a cell of class 1, 2, 3, 5, 6 or 7 the test reads unrelated data,
+so the cell may block sight or let it through whatever its tile. The test
+also samples only every second cell along the line, so a wall one cell thick
+does not always block sight. Use class 4 where sight matters. The editor's
+Marker tool steps a cell through classes 1-4 and changes only bits 13-15;
+Paint and Fill change only bits 0-8. Classes 5-7 are a review item, and for
+classes 1, 2, 3, 5, 6 and 7 the Check asks for a test play.
 
 ## The object list (`.spt`)
 
@@ -336,8 +356,8 @@ marker: the file's length gives the number of records.
 
 | Offset | Size | Field | Values |
 | --- | ---: | --- | --- |
-| `$00` | 2 | Ignored | Not read by the game. The editor writes 0 |
-| `$02` | 2 | Ignored | Not read by the game. The editor writes 0 |
+| `$00` | 2 | Ignored | Not read by the game; in the campaign's own files it holds a sprite number that their editor used. The editor writes 0 |
+| `$02` | 2 | Ignored | Not read by the game; 0 in the campaign's own files. The editor writes 0 |
 | `$04` | 2 | X | Position across, see below |
 | `$06` | 2 | Y | Position down in map pixels; the editor keeps 0 to height * 16 - 1 |
 | `$08` | 2 | Type | The [object type](#object-types), `$00`-`$6E` |
@@ -381,58 +401,80 @@ map's centre. A phase always keeps at least one object.
 
 The editor's object page offers these 70 types. The checks accept every type
 `$00`-`$6E`; the others are the game's internal objects (shots, explosions,
-companion parts and so on). A `(?)` marks a description that is a best guess.
-In the notes, *first 30* means the record must be among the first 30,
-*counted* that the game counts it when it loads the phase, so it must never
-be disabled, *enemy* and *building* that the Check counts it for objectives 1
-and 2, and `+` the companion records that follow it.
+companion parts and so on). In the notes, *first 30* means the record must
+be among the first 30, *counted* that the game counts it when it loads the
+phase, so it must never be disabled, *enemy* and *building* that the Check
+counts it for objectives 1 and 2, and `+` the companion records that follow
+it.
+
+Three things recur in the descriptions:
+
+- The *squad leader* is the first soldier of the selected squad, the one the
+  others follow. Mines, traps and items react to the squad leader only.
+- *Big explosions* are those of missiles and homing missiles, of the mine
+  `$36`, and of a computer or the rescue tent that blows up; grenades,
+  rockets and everything else make small ones. The strong doors `$58` and
+  `$64`, computers, tanks and the rescue tent, and turrets in the Moor and
+  Interior terrains, are destroyed only by big explosions. Any explosion
+  throws trees, bushes, roofs and `$10` into the air, and they explode where
+  they land.
+- Many objects take their pictures from the terrain, so one type looks
+  different in each terrain. Where the picture matters, the table names it
+  for the terrains that have one; elsewhere such a type shows an unrelated
+  picture.
 
 | Type | Object | Notes |
 | --- | --- | --- |
 | `$00` | Player soldier | First 30, counted |
 | `$48` | Hostage | First 30, counted; for objective 3 |
 | `$05` | Enemy soldier | First 30, counted, enemy |
-| `$24` | Enemy soldier with rockets (?) | First 30, counted, enemy |
+| `$24` | Enemy soldier with a rocket launcher: stays in place and fires rockets at targets more than 24 pixels away | First 30, counted, enemy |
 | `$6A` | Enemy leader | First 30, counted; + `$29`; for objective 5 |
-| `$0F` | Roof (?) | |
-| `$14`, `$19`, `$58` | Door that enemies come out of (three kinds) | Building |
-| `$64` | Reinforced door that enemies come out of | Building |
-| `$18` | Hole that enemies come out of: invisible, the editor shows an H | |
-| `$4A`, `$4B` | Door that civilians come out of (two kinds) | |
-| `$4C` | Door that civilians with spears come out of | |
+| `$0F` | Roof ridge, placed on the roof of a hut drawn in the map | |
+| `$14`, `$19` | Door that enemies come out of, destroyed by any explosion; `$19` lets them out 4 pixels higher | Building |
+| `$58` | Strong door that enemies come out of, destroyed only by big explosions | Building |
+| `$64` | Reinforced door that enemies come out of: as `$58`, but it takes many big explosions | Building |
+| `$18` | Hole that enemies come out of while any building stands: invisible, the editor shows an H | |
+| `$4A`, `$4B` | Door that civilians come out of: civilians `$3D`, civilians `$3E` | |
+| `$4C` | Door that civilians with spears (`$46`) come out of | |
 | `$49` | Rescue tent | For objectives 3 and 5 |
-| `$5A` | Civilian home | For objective 8 |
-| `$63` | Helicopter call pad | First 30 |
-| `$6C`, `$6D`, `$6E` | Computer (three kinds) | Building; for objective 7 |
+| `$5A` | Civilian home: destroying it fails the phase | For objective 8 |
+| `$63` | Helicopter call pad: when soldiers stand on all call pads at once, the waiting player helicopters fly to them | First 30 |
+| `$6C`, `$6D`, `$6E` | Computer; `$6D` takes 1.5 times and `$6E` 2.5 times as many big explosions as `$6C` | Building; for objective 7 |
 | `$28`, `$2A`, `$2B`, `$2C` | Enemy helicopter: grenades, unarmed, missiles, homing missiles | First 30, enemy; + `$04 $04 $29` |
-| `$6B` | Enemy helicopter with homing missiles, second kind | First 30; + `$04 $04 $29` |
+| `$6B` | Enemy helicopter with homing missiles that cannot be destroyed once the call pads have called | First 30; + `$04 $04 $29` |
 | `$31`, `$32`, `$33`, `$34` | Player helicopter: grenades, unarmed, missiles, homing missiles | First 30; + `$04 $04` |
-| `$66`, `$67`, `$68` | Player helicopter that comes when called (?) | First 30; + `$04 $04` |
-| `$3F`, `$40` | Player car, unarmed and with a gun (?) | First 30; + `$04` |
+| `$66`, `$67`, `$68` | Player helicopter that waits until the call pads call it: unarmed, missiles, homing missiles | First 30; + `$04 $04` |
+| `$3F`, `$40` | Player jeep: unarmed, with a gun | First 30; + `$04` |
 | `$41` | Player tank | First 30; + `$04` |
 | `$45` | Enemy tank | First 30, enemy; + `$04 $29` |
-| `$50`, `$51`, `$52` | Enemy car: unarmed, with a gun, other (?) | First 30, enemy; + `$04 $29` |
-| `$4E`, `$4F` | Player turret (two kinds) | First 30 |
-| `$54`, `$55` | Enemy turret (two kinds) | First 30, enemy; + `$29` |
-| `$69` | Enemy turret with homing missiles (?) | First 30, enemy; + `$29` |
-| `$0D`, `$11` | Shrub (two kinds) (?) | |
-| `$0E` | Tree (?) | |
-| `$10` | Snowman (?) | |
-| `$12` | Waterfall (?) | |
-| `$1B` | Dead soldier (?) | |
+| `$50`, `$51` | Enemy jeep that drives at soldiers and civilians it can see: unarmed, with a gun | First 30, enemy; + `$04 $29` |
+| `$52` | Enemy jeep, unarmed, that keeps driving to the right | First 30, enemy; + `$04 $29` |
+| `$4E`, `$4F` | Player missile turret: its missiles explode at the first obstacle (`$4E`) or fly over obstacles (`$4F`) | First 30 |
+| `$54`, `$55` | Enemy missile turret, the same two kinds | First 30, enemy; + `$29` |
+| `$69` | Enemy turret with homing missiles | First 30, enemy; + `$29` |
+| `$0D`, `$11` | Bush, two shapes: green in Jungle and Moor, dry in Desert, snowy on Ice | |
+| `$0E` | Tree: a palm in Jungle, Moor and Interior, a cactus in Desert, a snowy tree on Ice | |
+| `$10` | Snowman on Ice, wooden crate in Interior | |
+| `$12` | Waterfall | |
+| `$1B` | Dead soldier drifting in water | |
 | `$25`, `$26` | Crate of grenades, crate of rockets | |
-| `$36`, `$37` | Mine (two kinds) (?) | |
-| `$38` | Spikes (?) | |
-| `$3C` | Boiling pot (?) | + `$04`, at the owner's position |
-| `$3D`, `$3E` | Civilian (two kinds) (?) | First 30 |
-| `$46` | Civilian with a spear (?) | First 30 |
-| `$53` | Hidden civilian (?) | First 30 |
+| `$36` | Mine: a big explosion when the squad leader steps on it or when it is hit | |
+| `$37` | Trip wire: the squad leader trips over it, and it explodes a moment later | |
+| `$38` | Spike trap: kills the squad leader who steps on it | |
+| `$3C` | Pot over a fire in Jungle, campfire in the other terrains | + `$04`, at the owner's position |
+| `$3D` | Civilian who walks about, or home when the phase has a civilian home | First 30 |
+| `$3E` | Civilian as `$3D` but faster, who throws spears at the squad leader once a civilian has died | First 30 |
+| `$46` | Civilian with a spear, who throws spears at the squad leader | First 30 |
+| `$53` | Civilian who stands still | First 30 |
 | `$42`, `$43` | Bird flying left, bird flying right | |
-| `$44` | Seal (?) | |
-| `$5B`, `$5C` | Seal mine, spider mine (?) | |
-| `$5D` | Rank bonus | |
-| `$5E`, `$5F` | Rocket bonus, armour bonus (?) | |
-| `$60`, `$62` | Bonus for the squad leader, bonus for the squad | |
+| `$44` | Seal on Ice, sheep on Moor | |
+| `$5B` | Seal or sheep that explodes when the squad leader comes within 20 pixels | |
+| `$5C` | Spider mine: explodes when the squad leader comes within 10 pixels or when it is hit | |
+| `$5D` | Rank bonus: the squad leader gets the highest rank | |
+| `$5E` | Homing missile bonus: the squad leader's rockets become homing missiles, and the squad's rockets are set to 50 | |
+| `$5F` | Armour bonus: hits no longer hurt the squad leader | |
+| `$60`, `$62` | Bonus for the squad leader, bonus for the squad: the two bonuses above and the highest rank for the squad leader (`$60`) or for every soldier of the squad (`$62`), and the squad's rockets are set to 50 | |
 
 ### Companion records
 
@@ -517,6 +559,7 @@ number of review items.
 
 | Check | Condition |
 | --- | --- |
+| `Map wider than 321` | The map is more than 321 cells wide |
 | `Tile 399 has no graphics` | A cell uses tile 399 |
 | `Reserved cell bits set` | A cell has any of bits 9-12 set |
 | `Marker class 5 to 7` | A marker of class 5, 6 or 7 |
@@ -531,7 +574,7 @@ number of review items.
 
 "Active" means that X + 16 is below `$8000`. The Check runs over every phase
 of the mission and shows the place of each item; the mission lists check
-the selected mission when it is selected.
+a mission when it is played or opened.
 
 ## Checklist for writing a mission
 
@@ -543,8 +586,8 @@ only review items:
 2. Name the files `gggggggg.cmi`, `gggggggg00.map`, `gggggggg00.spt`,
    `gggggggg01.map` and so on, all in lower case, one map and one object
    list per phase, 1-6 phases.
-3. Map: a supported terrain pair in the two 16-byte slots, `cfed`, width at
-   least 19, height at least 15, at most 7,500 cells, the cells row by row;
+3. Map: a supported terrain pair in the two 16-byte slots, `cfed`, width
+   19-321, height at least 15, at most 7,500 cells, the cells row by row;
    tiles 0-398, bits 9-12 zero, at most ten markers of class 1-4; zeros in
    the other header bytes.
 4. Object list: 1-43 records of five words; the first two words 0; types from

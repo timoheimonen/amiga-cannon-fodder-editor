@@ -9,7 +9,7 @@ original campaign.
 Your campaign is set aside while you use the editor or play a custom mission,
 and it is restored exactly as it was when you return to the hill.
 
-This manual describes version 1.1 for WHDLoad.
+This manual describes version 1.2 for WHDLoad.
 
 ## Contents
 
@@ -321,8 +321,9 @@ Press **O** or click the active Object tool to open the object page.
   **Buildings**, **Vehicles** and **Items/terrain**. Click a tab, or press the
   left and right arrow keys, to change the group.
 - Each row shows the object's type number and name. In the Vehicles group,
-  `P` marks vehicles for your squad and `E` enemy vehicles. A name ending in
-  `?` is a best guess at what the object is.
+  `P` marks vehicles for your squad and `E` enemy vehicles. Several objects
+  take their pictures from the terrain: `10 SNOWMAN/CRATE` is a snowman on
+  Ice and a crate in the Interior.
 - The highlighted row is shown on the right with its game graphics.
 - Click a row (or **Choose**, or Return) to select the type and return to the
   map. **Cancel**, Esc or the right button return without a change.
@@ -430,8 +431,9 @@ away and continues, **Cancel** returns to the map.
 1. Choose the terrain: **Jungle A**, **Jungle B**, **Ice**, **Desert**,
    **Moor** or **Interior**.
 2. Set the map size with the **-** and **+** buttons (hold a button to
-   repeat). A map is at least 19 cells wide and 15 high and has at most 7,500
-   cells.
+   repeat). A map is 19-321 cells wide and at least 15 high, and has at most
+   7,500 cells. The game draws wider maps wrongly at the right edge;
+   Check lists a wider map made elsewhere as `Map wider than 321`.
 3. Click **Create**.
 
 When New mission is opened from the editor's mission list, it also has
@@ -776,7 +778,7 @@ directory has no room.
 
 | Item | Limit |
 | --- | --- |
-| Map size | At least 19 by 15 cells, at most 7,500 cells |
+| Map size | At least 19 by 15 cells, at most 321 cells wide and 7,500 cells |
 | Phases per mission | 1-6 |
 | Objects per phase | 43 parts, people and vehicles among the first 30, at least one object |
 | Soldiers in the squad | 8 |

@@ -1,10 +1,10 @@
-; Cannon Fodder In-Game Level Editor V1.1
+; Cannon Fodder In-Game Level Editor V1.2
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
 ; Resize map: three dialogs of the Slave's dialog service on the same band,
 ; one per RZ_MODE. 0 chooses the size (steppers that repeat while held and
-; are disabled at 19 by 15 and at 7,500 cells); 1 confirms, says that Undo is
+; are disabled at 19 by 15, at 321 across and at 7,500 cells); 1 confirms, says that Undo is
 ; cleared and lists the removed objects one at a time; 2 names a refusal.
 ; EXIT_CHOICE=0 Cancel, 1 confirmed, 2 unchanged. Canonical owners are
 ; read-only; Continue stages the placements in RZ_SPT.
@@ -85,7 +85,7 @@ page_step:
         moveq #0,d2
         bsr dialog_open
         bne.s .failed
-        bsr.s resize_dialog_draw
+        bsr resize_dialog_draw
         bra edtr_modal_idle
 .failed:
         moveq #-1,d0
@@ -107,11 +107,13 @@ page_step:
         lea RZ_WIDTH,a0
         move.w RZ_HEIGHT,d3
         moveq #19,d4
+        move.w #321,d5
         cmpi.w #2,d0
         blo.s .direction
         lea RZ_HEIGHT,a0
         move.w RZ_WIDTH,d3
         moveq #15,d4
+        move.w #7500,d5
 .direction:
         moveq #-1,d2
         btst #0,d0
@@ -121,6 +123,8 @@ page_step:
         add.w (a0),d2
         cmp.w d4,d2
         blo.s .redraw
+        cmp.w d5,d2
+        bhi.s .redraw
         mulu d2,d3
         cmpi.l #7500,d3
         bhi.s .redraw
@@ -240,6 +244,10 @@ resize_dialog_draw:
         mulu d1,d4
         cmpi.l #7500,d4
         sls d3
+        cmpi.w #321,d0
+        blo.s .wider
+        moveq #0,d3
+.wider:
         bsr resize_enable
         cmpi.w #15,d1
         sne d3

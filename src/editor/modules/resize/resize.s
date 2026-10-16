@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.1
+; Cannon Fodder In-Game Level Editor V1.2
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -73,9 +73,10 @@ resize_entry:
         bhs.s .max_width
         move.w #19,RZ_WIDTH
 .max_width:
-        cmpi.w #500,RZ_WIDTH
+        ; The game draws maps wider than 321 cells wrongly at the right edge.
+        cmpi.w #321,RZ_WIDTH
         bls.s .min_height
-        move.w #500,RZ_WIDTH
+        move.w #321,RZ_WIDTH
 .min_height:
         cmpi.w #15,RZ_HEIGHT
         bhs.s .max_height

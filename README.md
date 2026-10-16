@@ -126,7 +126,8 @@ game and are kept in `SaveDisk`.
   written. Every file there must hold 1 to 65,535 bytes.
 - The game reads `Custom` when it starts: restart it after changing `Custom`
   from outside the game. Keep only the editor's files and missions there.
-- A mission has at most six phases; a map at most 7,500 cells.
+- A mission has at most six phases; a map at most 321 cells across and 7,500
+  cells.
 - F10 quits at once, also with unsaved changes.
 
 ## Build
