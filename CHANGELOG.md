@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.2.2 17-10-2026
+
+- The object page names `3F P JEEP UNARMED`: like `32 P HELI UNARMED`, it
+  has no weapon. Soldiers never fire from inside a vehicle, so a squad that
+  must fight while it rides needs an armed vehicle such as
+  `40 P JEEP WITH GUN`.
+
 ## V1.2.1 16-10-2026
 
 - `patch.py` also writes the drawer icon `CannonFodder.info` beside the new

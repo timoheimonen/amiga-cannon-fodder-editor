@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.1
+; Cannon Fodder In-Game Level Editor V1.2.2
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -102,7 +102,7 @@ pal_catalog:
 .name25: dc.b "32 P HELI UNARMED",-1
 .name26: dc.b "33 P HELI MISSILE",-1
 .name27: dc.b "34 P HELI HOMING",-1
-.name28: dc.b "3F P JEEP",-1
+.name28: dc.b "3F P JEEP UNARMED",-1
 .name29: dc.b "40 P JEEP WITH GUN",-1
 .name30: dc.b "41 P TANK",-1
 .name31: dc.b "45 E TANK",-1
