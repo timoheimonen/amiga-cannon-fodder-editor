@@ -9,7 +9,7 @@ original campaign.
 Your campaign is set aside while you use the editor or play a custom mission,
 and it is restored exactly as it was when you return to the hill.
 
-This manual describes version 1.2.1 for WHDLoad.
+This manual describes version 1.2.2 for WHDLoad.
 
 ## Contents
 
@@ -358,6 +358,28 @@ A phase always keeps at least one object, so the last object cannot be
 deleted (`Last object`). Objects cannot be placed in the map's first column
 or outside the map; a placement or drag there stops at the nearest allowed
 position.
+
+### Vehicles
+
+The `P` vehicles carry your squad. Keep in mind how the game treats them
+when you choose one:
+
+- Soldiers never fire their own weapons inside a vehicle. Only an armed
+  vehicle fires, with the right mouse button: `40 P JEEP WITH GUN`,
+  `41 P TANK` and the helicopters `31`, `33` and `34`.
+- `3F P JEEP UNARMED` and `32 P HELI UNARMED` have no weapon at all. Like
+  the snow vehicle of the original phase 5.3 (MY BEAUTIFUL SKIDU), they only
+  carry the squad. If the squad must fight while it rides, place an armed
+  vehicle.
+- On Ice both jeeps are drawn as skidoos, so the two look the same in the
+  game. The object page and the information line tell them apart by type
+  number.
+- The vehicle's weapon works only when the whole selected squad is aboard.
+  While one soldier is still on foot, the vehicle does not fire; the soldiers
+  on foot fire as usual.
+- To get out, click the vehicle with the left button. A helicopter must
+  land first: the first click on it brings it down, and a click on the
+  landed helicopter lets the squad out.
 
 ## 7. Markers and Inspect
 
