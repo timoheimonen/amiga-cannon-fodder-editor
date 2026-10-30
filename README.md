@@ -135,6 +135,7 @@ game and are kept in `SaveDisk`.
 ```sh
 python3 build.py
 ```
+Requires: [vasm](http://sun.hasenbraten.de/vasm/) `vasmm68k_mot`.
 
 Assembles and links the editor's resident, its seventeen modules and the
 slave, and embeds them with the table of the editor's patches in the
