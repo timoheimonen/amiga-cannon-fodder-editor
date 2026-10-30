@@ -35,8 +35,6 @@ More: [the tile page](docs/screenshots/tile-page.png),
   A1200 (68020, AGA, Kickstart 3.1, 2 MiB chip and 4 MiB fast memory); not
   tested on real hardware.
 - Python 3.8 or later (for `patch.py`).
-- [vasm](http://sun.hasenbraten.de/vasm/) `vasmm68k_mot` and
-  [vlink](http://sun.hasenbraten.de/vlink/) (only for `build.py`).
 - ADF images of the game's three disks with these SHA-256 hashes (the names
   are the ones these images are commonly catalogued under):
 
