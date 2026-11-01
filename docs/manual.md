@@ -9,7 +9,7 @@ original campaign.
 Your campaign is set aside while you use the editor or play a custom mission,
 and it is restored exactly as it was when you return to the hill.
 
-This manual describes version 1.2.2 for WHDLoad.
+This manual describes version 1.2.3 for WHDLoad.
 
 ## Contents
 

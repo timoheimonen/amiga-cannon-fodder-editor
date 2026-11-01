@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.2.3 01-11-2026
+
+- The editor no longer reads memory that WHDLoad does not give the game.
+  Where WHDLoad uses the MMU (a 68040 or 68060, or its `MMU` option on a
+  68030), New, Open and Edit stopped with `Exception "Access Fault"` at
+  `$B186E`.
+
 ## V1.2.2 17-10-2026
 
 - The object page names `3F P JEEP UNARMED`: like `32 P HELI UNARMED`, it
