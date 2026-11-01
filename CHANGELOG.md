@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.2.4 01-11-2026
+
+- `patch.py import` refuses a mission whose ID a mission in the target
+  `Custom` already has. The editor treats missions with one ID as one
+  mission, so deleting or saving one of them could delete the other. With
+  `--new-id` it imports the mission under the first free ID instead.
+
 ## V1.2.3 01-11-2026
 
 - The editor no longer reads memory that WHDLoad does not give the game.

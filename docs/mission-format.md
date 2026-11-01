@@ -18,7 +18,7 @@ The terrain graphics are not in a mission's files: the game loads them from
 its own disks by the names in the map.
 
 What the editor writes into the fields is the editor's behaviour, not part
-of the format. The notes on the editor describe editor version 1.2.3; a later
+of the format. The notes on the editor describe editor version 1.2.4; a later
 version that writes otherwise changes only those notes. (Version 1.0 picked
 the lowest free generation.) The format itself is
 version 1: `CFMI` version 1 with the schema `cannon-fodder-custom-mission-v1`.
@@ -142,9 +142,15 @@ damaged manifest it deletes only the files of that generation.
 
 **IDs must be unique.** The editor treats every manifest with the same ID as
 a generation of one mission: Delete removes them all, and a Save of one
-deletes the others when they are complete. `patch.py import` does not
-compare IDs. Give a mission written by hand an ID that no other manifest in
-the target `Custom` has; a random one is best.
+deletes the others when they are complete. `patch.py import` therefore
+refuses a mission whose ID a valid manifest in the target `Custom` already
+has, whether that manifest's files are complete or not. The editor numbers
+new missions from 0 in every install, so missions from two installs often
+share an ID. `patch.py import --new-id` then gives the mission the first ID
+from its own upward that no valid manifest there has, as Save as does: it
+writes the manifest again in canonical form with that ID and leaves the
+phase files unchanged. Give a mission written by hand an ID that no other
+manifest in the target `Custom` has; a random one is best.
 
 ## The manifest (`.cmi`)
 
@@ -609,7 +615,7 @@ only review items:
 9. Room in `Custom`: 2*n* + 1 free files and the quota.
 10. Copy the files into `Custom` while the game is not running, or put them
     in a directory of their own and add them with `patch.py import`, which
-    checks them first. Then start the game.
+    checks them and the mission ID first. Then start the game.
 
 ## Example
 
