@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.2
+; Cannon Fodder In-Game Level Editor V1.2.3
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -112,6 +112,6 @@ TERRAIN_STAMP_BYTES     equ 40
 ; and HIT tables: what the game skips when its caches match.
 TERRAIN_BLK             equ $3FBEA
 TERRAIN_BLK_LONGS       equ (240+159)*128/4
-TERRAIN_PALETTE         equ $C000A0
-TERRAIN_ATTRIBUTES      equ $C78A9A
-TERRAIN_ATTRIBUTE_WORDS equ ($C79D5C-$C78A9A)/2
+TERRAIN_PALETTE         equ editor_base_palette
+TERRAIN_ATTRIBUTES      equ editor_swp_table
+TERRAIN_ATTRIBUTE_WORDS equ (editor_hit_table+400*2-editor_swp_table)/2
