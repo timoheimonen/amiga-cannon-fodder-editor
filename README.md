@@ -91,8 +91,9 @@ python3 patch.py import OtherInstall/Custom MyMission
 
 `list` shows the missions with their titles and states, `export` copies one
 complete mission to a new directory, and `import` adds it to a `Custom`
-directory if no file of the same name exists and there is room. Do not run
-them on an install the game is running from.
+directory if no file of the same name exists, there is room and no mission
+there has the same ID (if one does, add `--new-id` to import it under a free
+ID). Do not run them on an install the game is running from.
 
 ## Using the editor
 

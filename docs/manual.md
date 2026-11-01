@@ -9,7 +9,7 @@ original campaign.
 Your campaign is set aside while you use the editor or play a custom mission,
 and it is restored exactly as it was when you return to the hill.
 
-This manual describes version 1.2.3 for WHDLoad.
+This manual describes version 1.2.4 for WHDLoad.
 
 ## Contents
 
@@ -753,10 +753,24 @@ python3 patch.py export CannonFodder/Custom 00000001.cmi --output RiverRaid
 python3 patch.py import OtherInstall/Custom RiverRaid
 ```
 
-`list` shows each mission's `.cmi` file and title. `export` copies a mission
-and its phase files to a new directory; `import` adds them to another
-`Custom` directory and refuses if a file of the same name exists or the
-directory has no room.
+`list` shows each mission's `.cmi` file, ID and title. `export` copies a
+mission and its phase files to a new directory; `import` adds them to
+another `Custom` directory. It refuses if a file of the same name exists, if
+the directory has no room, or if a mission there has the same ID. The editor
+treats missions with one ID as one mission: deleting one would delete both,
+and saving one would delete the other. Every install numbers its missions
+from 0, so two installs often use the same IDs.
+
+When the ID is in use, add `--new-id`:
+
+```sh
+python3 patch.py import OtherInstall/Custom RiverRaid --new-id
+```
+
+The mission then gets the first ID, counting up from its own, that no
+mission there has, as **Save as...** chooses one. Only the ID in its `.cmi`
+file changes; the phase files are copied as they are. `import` prints the
+ID the mission got.
 
 ### Messages
 
