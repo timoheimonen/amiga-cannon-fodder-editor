@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -263,6 +263,13 @@ bar_clear:
         movem.l (sp)+,d0-d1/a0
         rts
 
+; D0.w value below 100, A0 output. Writes it without a leading zero and
+; returns A0 after it. Clobbers D0-D1/A1.
+bar_number:
+        moveq #0,d1
+        cmpi.w #10,d0
+        blo.s bar_digits
+        moveq #1,d1
 ; D0.w value, D1.w digits-1, A0 output. Writes zero-padded digits and
 ; returns A0 after them. Clobbers D0/A1.
 bar_digits:
@@ -324,6 +331,8 @@ bar_append_phase:
         move.b AUR_BASE+AUR_PHASE_COUNT,d0
         moveq #0,d1
         bsr bar_digits
+; Append "  Unsaved" while the draft has unsaved changes. Clobbers A1.
+bar_append_unsaved:
         btst #1,AUR_BASE+AUR_FLAGS+1
         beq.s .saved
         lea bar_unsaved_text(pc),a1

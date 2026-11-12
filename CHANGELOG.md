@@ -1,5 +1,28 @@
 # Changelog
 
+## V1.2.5 12-11-2026
+
+- Copy and paste in Paint: Shift with a right drag selects an area of at
+  most 256 cells (`Area 5x4`), and the copy becomes the brush (`Block 5x4`).
+  Each press of the left button stamps it once, as one step for Undo; a
+  frame on the map shows where it lands. `V` brings the copied block back,
+  also in another phase or another mission of the same terrain.
+- Rectangles in Paint: Shift with a left drag frames an area, and releasing
+  the button paints every cell of it with the selected tile as one step for
+  Undo. The right button gives the rectangle up. More than 256 cells cannot
+  be undone, so the editor asks first.
+- The Marker tool draws every marker cell on the map with a frame and its
+  class number.
+- The Help key on the map opens two Help pages: the tools and the keys.
+- New keys on the map: `C` is Check, `G` is Test and `S` is Save. In the
+  Object tool, Tab selects the next object of the phase and shows it in the
+  middle of the screen.
+- With the pointer on the tool bar, the information line counts what the
+  phase uses of its limits: `Markers 3/10` in the Marker tool, and the
+  parts, units and squad in the Object tool.
+- Shift held while the pointer scrolls the map at a screen edge moves a
+  screen at a time instead of one cell.
+
 ## V1.2.4 01-11-2026
 
 - `patch.py import` refuses a mission whose ID a mission in the target

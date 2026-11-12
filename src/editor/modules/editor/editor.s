@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -16,6 +16,7 @@
         include "save.i"
         include "authoring.i"
         include "authoring_recovery.i"
+VIEW_STATE_BASE         equ EDITOR_MODULE_BASE+EDITOR_MAP_VIEW_BYTES
         include "state.i"
         include "dialog.i"
 STORAGE_INSPECT_ONLY equ 1
@@ -221,6 +222,13 @@ edtr_acquire_view:
         move.l #-1,TERRAIN_CURSOR_X
 .cursor_ready:
         clr.w TERRAIN_STROKE_BLOCK
+        ; The brush is a tile again; the key V recalls a copied block.
+        clr.l TERRAIN_BLOCK_W
+        clr.l TERRAIN_SELECT_X
+        clr.l TERRAIN_SELECT
+        clr.l BLOCK_FRAME
+        clr.l BLOCK_FRAME+4
+        clr.w AREA_PENDING
         ; The Marker tool starts with its hint in the bar.
         clr.w TERRAIN_MARKER_HINT
         cmpi.w #3,AUR_BASE+AUR_TOOL
@@ -259,7 +267,7 @@ edtr_view_idle:
         tst.w d0
         bmi edtr_recovery_blocked
         beq.s edtr_view_idle
-        cmpi.w #11,d0
+        cmpi.w #12,d0
         bhi edtr_recovery_blocked
         ; Index only the low word; Fill/large-stroke keep their high-word seed.
         add.w d0,d0
@@ -279,14 +287,19 @@ edtr_input_actions:
         dc.w edtr_request_palette-edtr_input_actions
         dc.w edtr_request_validation-edtr_input_actions
         dc.w edtr_request_test-edtr_input_actions
+        dc.w edtr_help-edtr_input_actions
 edtr_request_save:
         cmpi.w #1,edtr_view_live
         bne edtr_recovery_blocked
         bsr edtr_release_view
         bra.s edtr_save_released
 
+edtr_help:
+        moveq #EDTR_HELP,d1
+        bra.s edtr_message
 edtr_marker_limit:
         moveq #EDTR_MARKER_LIMIT,d1
+edtr_message:
         move.w d1,-(sp)
         bsr edtr_release_view
         move.w (sp)+,d1
@@ -649,8 +662,8 @@ TESTED_RESULT_ENTRY equ 1
         include "validation_route.s"
         include "test_route.s"
 editor_end:
-        ifgt editor_end-editor_start-EDITOR_SERIALIZER_BYTES
-        fail "EDTR exceeds installable 16 KiB"
+        ifgt editor_end-editor_start-EDITOR_MAP_VIEW_BYTES
+        fail "EDTR exceeds the map view's 20 KiB"
         endif
         ifne PV_STATE_SIZE-3216
         fail "Preview scratch extent changed"

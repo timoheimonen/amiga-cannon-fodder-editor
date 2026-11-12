@@ -50,7 +50,7 @@ between two of its steps.
 flowchart TB
     disk[("Install directory on the hard disk<br/>CannonFodder.slave, Main.bin,<br/>Disk.1-3, SaveDisk,<br/>Custom/: CFEDITOR, 17 modules, missions")]
     whd["<b>WHDLoad</b><br/>resload API: files, disk images,<br/>quit key, error requesters"]
-    slave["<b>CannonFodder.slave</b><br/>start-up, track reader and writer,<br/>services: files, modules, text,<br/>dialogs, hill labels, keys, CRC"]
+    slave["<b>CannonFodder.slave</b><br/>start-up, track reader and writer,<br/>services: files, modules, text,<br/>dialogs, hill labels, keys, CRC,<br/>clipboard"]
 
     subgraph RUN["Running game: BaseMem, operating system off"]
         game["<b>Game engine</b>: FODDERC at $80000<br/>hill, briefing, play,<br/>campaign save and load"]
@@ -93,7 +93,7 @@ cleared at start), where the game expects to run, and for 40 KiB of ExpMem
 for the dialog service's backups. All editor code and data live in BaseMem;
 the slave keeps its own small state (a listing buffer, the remembered
 listing of `Custom`, the CRC table, the remembered modules, the dialog and
-key state) in its own memory.
+key state, the copied map area) in its own memory.
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 400}}}%%
@@ -141,7 +141,7 @@ banks without gaps:
 | Module bank | Address | Bytes | Contents |
 | --- | --- | --- | --- |
 | Module window | $B11FA | 16,384 | The loaded module: header, code, constants and a private tail |
-| Readback | $B51FA | 15,096 | Files read from `Custom`, catalogs, page and dialog scratch |
+| Readback | $B51FA | 15,096 | Files read from `Custom`, catalogs, page and dialog scratch; the map view's code beyond 16,384 bytes and its view state |
 | Serializer work | $B8CF2 | 1,288 | The file service's state (first 864 bytes), parser output, candidates |
 | Undo | $B91FA | 4,096 | The editor's undo history: up to 256 records |
 | Manifest | $BA1FA | 4,096 | The open mission's manifest; the output of Save |
@@ -563,10 +563,11 @@ only its request at $AF9E8.
 | 1-4 | File service: inspect, read, create, delete | `file_service.s` | Mission files in `Custom` |
 | 5 | Module transport | `module_transport.s` | Loads a module into the bank |
 | 6 | Text service | `ui_service.s`, `ui_font.i` | Draws a command list into a four-plane bitmap |
-| 7 | Dialog service | `dialog_service.s` | Dialog bands: stamp, open, poll, close, draw, set |
+| 7 | Dialog service | `dialog_service.s`, `help_service.s` | Dialog bands: stamp, open, poll, close, draw, set; the Help pages |
 | 8 | Hill labels | `hill_service.s` | EDITOR and CUSTOM below the hill's disks |
 | 9-11 | Key service | `key_service.s` | The keyboard interrupt and the per-field key event |
 | 12 | CRC-32 | `file_service.s` | The reflected IEEE CRC-32 of a memory range |
+| 13 | Clipboard | `clipboard_service.s` | Keeps the map area copied in the map view |
 
 **Text.** The text service draws rectangles, frames, text and bevelled
 buttons from a command list (`src/editor/include/ui.i`) into a bitmap the
@@ -589,12 +590,25 @@ underlined and chooses the button. The cursor keys that the module leaves
 move the default frame, which Return chooses. A dialog starts with no key
 held, and closing it restores the copper list byte for byte.
 
+The Help pages are dialogs that the slave holds itself, text included: the
+menu module names a page and the slave opens it, so the pages take no room
+in a module. The Help key in the map view and the Object view reaches the
+menu module as a message.
+
 **Keys.** The game turns the held key into an event once per field, and the
 event lasts one field. Outside the editor the key service keeps that rule.
 While a module runs outside play it keeps an event until the module reads
 it, and it reports a press whose release came before the next field, which
 happens after WHDLoad has run the operating system. The module transport and
 the file service return with no key held for the same reason.
+
+**Clipboard.** The map view copies an area of at most 256 cells as a
+record of the area's size, the name of the terrain's second tile set and a
+tile number per cell (`BLOCK_*` in `src/editor/include/ui.i`). The modules
+cannot keep it, since the module bank and its work areas are reused by
+every page, so the slave stores the record and hands it back when asked;
+the map view checks the whole record before it uses it. The record lasts
+until the game quits.
 
 ## Disks and campaign saves
 
@@ -663,6 +677,9 @@ without any game file:
    bytes at $8A404) and `resource_loaders` (226 bytes at $875F8).
 3. It links the seventeen modules at $B11FA, each within the 16 KiB window
    less its private tail, and writes the CRC-32 of each body into its header.
+   The map view (`cf_editor.mod`) alone may be 20,480 bytes: it reads no
+   file while it is loaded, so its code runs on into the readback area and
+   its view state starts above it.
 4. It turns `src/hooks.json` into patch rows: a JMP or JSR with NOP padding,
    new bytes, or a component. Ranges may not overlap, a replaced range must
    end where the game goes on, and a host patch may coincide with a hook only

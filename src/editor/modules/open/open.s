@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -301,7 +301,7 @@ open_menu_request:
         dc.l MENU_MODULE_ID,EDITOR_SERIALIZER_BYTES
 open_editor_request:
         dc.b "cf_editor.mod",0,0,0
-        dc.l EDTR_MODULE_ID,EDITOR_SERIALIZER_BYTES
+        dc.l EDTR_MODULE_ID,EDITOR_MODULE_BYTES
         include "catalog.s"
 DIALOG_LIST_CLICKS equ 1
         include "dialog.s"

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -267,6 +267,8 @@ edtr_receive_tile:
         cmpi.w #OBJECT_LAST_ITEM,d2
         beq.s .object_notice
         cmpi.w #OBJECT_NO_ROOM,d2
+        beq.s .object_notice
+        cmpi.w #EDTR_HELP,d2
         beq.s .object_notice
         tst.w d2
         beq.s .object_terrain

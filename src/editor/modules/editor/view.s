@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -145,15 +145,24 @@ paint_cell:
         add.l d0,d0
         lea editor_map_grid,a0
         move.w 0(a0,d0.w),d0
+        ifnd AUR_OBJECT_VIEW
+        move.w d0,d1
+        endif
         and.l #$1ff,d0
         cmpi.w #399,d0
         blo.s .tile_ready
 .outside:
         moveq #0,d0
+        ifnd AUR_OBJECT_VIEW
+        moveq #0,d1
+        endif
 .tile_ready:
         lsl.l #7,d0
         lea editor_tile_data,a2
         adda.l d0,a2
+        ifnd AUR_OBJECT_VIEW
+        bsr marker_tile
+        endif
         move.w d4,d3
         mulu #640,d3
         add.w d6,d3

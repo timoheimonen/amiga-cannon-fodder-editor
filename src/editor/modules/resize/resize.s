@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -281,7 +281,7 @@ resize_poll_escape:
         rts
 resize_editor_request:
         dc.b "cf_editor.mod",0,0,0
-        dc.l EDTR_MODULE_ID,EDITOR_SERIALIZER_BYTES
+        dc.l EDTR_MODULE_ID,EDITOR_MODULE_BYTES
 
         include "map.s"
         include "spt.s"

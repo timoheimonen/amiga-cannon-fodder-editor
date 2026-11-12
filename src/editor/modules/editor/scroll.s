@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -29,9 +29,15 @@ scroll_zones:
         bhs.s .down
         bset #2,d2
 .down:
-        ; While painting or dragging, the map's bottom rows scroll down too.
+        ; While painting, dragging or selecting an area, the map's bottom
+        ; rows scroll down too.
         tst.w native_left_down
+        ifnd AUR_OBJECT_VIEW
+        bne.s .held
+        tst.w TERRAIN_SELECT
+        endif
         beq.s .done
+.held:
         cmpi.w #184,d1
         bhs.s .scroll_down
         rts
@@ -53,6 +59,8 @@ scroll_zones:
 terrain_scroll_enter:
         movem.l d0-d2,-(sp)
         clr.l TERRAIN_SCROLL_DIR
+        cmpi.w #192,native_mouse_y
+        shs TERRAIN_ON_BAR
         bsr.s scroll_zones
         moveq #0,d0
         tst.w d2
@@ -67,7 +75,8 @@ terrain_scroll_enter:
 terrain_scroll:
         movem.l d1-d7/a0-a6,-(sp)
         moveq #0,d2
-        move.w native_raw_key,d0
+        move.w native_raw_key,d5
+        move.w d5,d0
         subi.w #$4C,d0
         cmpi.w #3,d0
         bhi.s .pointer
@@ -93,50 +102,41 @@ terrain_scroll:
 .step:
         move.w d2,TERRAIN_SCROLL_DIR
         move.w #7,TERRAIN_SCROLL_REPEAT
+        ; One cell, or a screen less one cell while Shift (raw $60/$61) is
+        ; the held key: the game keeps one held key, so Shift shows only
+        ; with the pointer, not with an arrow key.
+        moveq #1,d3
+        moveq #1,d4
+        lsr.w #1,d5
+        cmpi.w #$30,d5
+        bne.s .cell
+        ifnd AUR_OBJECT_VIEW
+        ; An area being selected grows by a cell.
+        tst.w TERRAIN_SELECT
+        bne.s .cell
+        endif
+        moveq #18,d3
+        moveq #11,d4
+.cell:
         move.w view_origin_x+PCREL(pc),d0
         move.w view_origin_y+PCREL(pc),d1
         btst #0,d2
         beq.s .xplus
-        subq.w #1,d0
+        sub.w d3,d0
 .xplus:
         btst #1,d2
         beq.s .yminus
-        addq.w #1,d0
+        add.w d3,d0
 .yminus:
         btst #2,d2
         beq.s .yplus
-        subq.w #1,d1
+        sub.w d4,d1
 .yplus:
         btst #3,d2
         beq.s .bounds
-        addq.w #1,d1
+        add.w d4,d1
 .bounds:
-        move.w editor_map_width,d6
-        subi.w #19,d6
-        bpl.s .width
-        moveq #0,d6
-.width:
-        move.w editor_map_height,d7
-        subi.w #12,d7
-        bpl.s .height
-        moveq #0,d7
-.height:
-        tst.w d0
-        bpl.s .xmax
-        moveq #0,d0
-.xmax:
-        cmp.w d6,d0
-        bls.s .ymin
-        move.w d6,d0
-.ymin:
-        tst.w d1
-        bpl.s .ymax
-        moveq #0,d1
-.ymax:
-        cmp.w d7,d1
-        bls.s .changed
-        move.w d7,d1
-.changed:
+        bsr.s scroll_clamp
         cmp.w view_origin_x+PCREL(pc),d0
         bne.s .publish
         cmp.w view_origin_y+PCREL(pc),d1
@@ -163,4 +163,34 @@ terrain_scroll:
 .keys:
         dc.b 4,8,2,1
         even
+; D0/D1.w=a view origin, signed: brought to where the view lies inside the
+; map. Clobbers D6/D7.
+scroll_clamp:
+        move.w editor_map_width,d6
+        subi.w #19,d6
+        bpl.s .width
+        moveq #0,d6
+.width:
+        move.w editor_map_height,d7
+        subi.w #12,d7
+        bpl.s .height
+        moveq #0,d7
+.height:
+        tst.w d0
+        bpl.s .xmax
+        moveq #0,d0
+.xmax:
+        cmp.w d6,d0
+        bls.s .ymin
+        move.w d6,d0
+.ymin:
+        tst.w d1
+        bpl.s .ymax
+        moveq #0,d1
+.ymax:
+        cmp.w d7,d1
+        bls.s .inside
+        move.w d7,d1
+.inside:
+        rts
 terrain_scroll_end:
