@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -58,6 +58,15 @@ edtr_modal:
         bsr     menu_title_open
         bra.s   .opened
 .standard:
+        ; The Help key's message is the Slave's Help pages.
+        cmpi.w  #EDTR_DIALOG_MESSAGE,d7
+        bne.s   .plain
+        cmpi.w  #EDTR_HELP,d6
+        bne.s   .plain
+        moveq   #0,d2
+        bsr     menu_help_page
+        bra.s   .opened
+.plain:
         bsr     dialog_standard_open
 .opened:
         bne.s   exit_ui_refuse
@@ -75,6 +84,14 @@ edtr_modal_idle:
         beq menu_title_step
         bsr.s dialog_poll
         bmi.s edtr_modal_idle
+        ; A button of a Help page names the page to show.
+        cmpi.w #DIALOG_HELP_PAGE,d0
+        blo.s .chosen
+        move.w d0,d2
+        subi.w #DIALOG_HELP_PAGE,d2
+        bsr.s menu_help_page
+        bra.s edtr_modal_idle
+.chosen:
         move.w d0,EXIT_CHOICE
 
 edtr_modal_finish:
@@ -90,6 +107,10 @@ exit_ui_refuse:
         moveq   #EDTR_VISUAL_ERROR,d0
         movem.l (sp)+,d1-d7/a0-a6
         rts
+; D2.w=page of the Slave's Help. D0.l=0 open, 10 refused.
+menu_help_page:
+        moveq   #DIALOG_HELP,d0
+        bra     dialog_call
         even
 edtr_modal_end:
         ifgt EXIT_UI+EXIT_UI_BYTES-EDITOR_SERIAL_WORK_BASE-EDITOR_SERIAL_WORK_BYTES

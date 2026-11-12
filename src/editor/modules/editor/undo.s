@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -9,7 +9,7 @@
 ; 2 confirmation required,-1 invalid. No engine calls, allocations or pointers
 ; are stored in the log. An active operation must close before overlay eviction.
         section .text,code
-        xdef tu_begin,tu_change,tu_end,tu_confirm_large,tu_undo
+        xdef tu_begin,tu_change,tu_change_checked,tu_end,tu_confirm_large,tu_undo
         xdef tu_start,tu_finish
 TU_BEGIN        equ $8000
 TU_CELL         equ 1
@@ -38,7 +38,17 @@ tu_begin:
 tu_change:
         movem.l d1-d7/a0-a6,-(sp)
         bsr tu_validate
-        bne .return
+        beq.s tu_change_valid
+        movem.l (sp)+,d1-d7/a0-a6
+        tst.l d0
+        rts
+; The same without the check of the whole log, for an operation that changes
+; many cells in one call: the log must have passed tu_begin or tu_change and
+; nothing else may have written it since.
+tu_change_checked:
+        movem.l d1-d7/a0-a6,-(sp)
+        moveq #0,d0
+tu_change_valid:
         cmp.w d7,d1
         bhs .invalid
         tst.w (a3)

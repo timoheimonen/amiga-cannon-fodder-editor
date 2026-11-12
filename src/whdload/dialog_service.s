@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -20,7 +20,7 @@ DIALOG_GUARD_FIELDS equ 20
 DIALOG_GUARD_MOVE   equ 4
 dialog_service:
         movem.l d1-d7/a0-a6,-(sp)
-        cmpi.w #DIALOG_SET,d1
+        cmpi.w #DIALOG_HELP,d1
         bhi.s .refuse
         add.w d1,d1
         move.w .jump(pc,d1.w),d1
@@ -35,6 +35,7 @@ dialog_service:
 .jump:
         dc.w dialog_stamp-.jump,dialog_open-.jump,dialog_poll-.jump
         dc.w dialog_close-.jump,dialog_draw-.jump,dialog_set-.jump
+        dc.w dialog_help-.jump
 
 ; A0=sixteen terrain colours, D2.w=ring byte offset of the first view row.
 dialog_stamp:

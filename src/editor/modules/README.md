@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.2.4
+<!-- Cannon Fodder In-Game Level Editor V1.2.5
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -16,6 +16,13 @@ owns the display while they are open.
 The [phase list](phase_list/README.md), [validation list](validation/README.md)
 and [Test lifecycle](test/README.md) use separate bounded overlays. Their private
 tails remain inside the existing 16 KiB serializer window.
+
+Every module fits the 16 KiB window except the map view (`cf_editor.mod`),
+which may be 20,480 bytes. Its image runs on into the readback area, where
+the other modules keep their view state and read their files, and its own
+view state starts above it. This holds because the map view asks for no file
+read while it is loaded; a function that needs one belongs in another module.
+Requests for the map view name the 32,768-byte capacity.
 
 The build produces seventeen module files. They are installed in the `Custom`
 directory next to the `CFEDITOR` marker:
@@ -149,12 +156,15 @@ receipt to EDTR; it cannot publish replacement data. See `live_files/README.md`
 for its state and snapshot ownership.
 
 MENU also serves authoring messages on AUR page kind 8 and large-Paint
-confirmation on kind 9. Requests carry a status word or bounded cell index;
+confirmation on kind 9. The Help key in the map view and the Object view is
+a message with the status `EDTR_HELP`: MENU opens the Slave's Help pages for
+it and shows the page a button names until Close. Requests carry a status word or bounded cell index;
 the checked result is consumed once after the modal releases its display.
 
 The object view uses identity OBJV and page kind 10 with candidate NONE.
 Object placement, movement, deletion and Undo run in memory while this view
-owns the display. A request with a terrain tool performs one object Undo
+owns the display. Tab selects the object after the selected one, as a click
+would, and draws the view again with that object in its middle. A request with a terrain tool performs one object Undo
 without acquiring the object display. Mixed Undo returns through EDTR when
 the newest group contains terrain changes. Shared transaction sources live
 in `object_transactions/`; both views use the same complete-group history.

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -93,6 +93,23 @@ HILL_OPERATION      equ 8
 KEY_STORE_OPERATION equ 9
 KEY_EVENT_OPERATION equ 10
 KEY_HOLD_OPERATION  equ 11
+; The Slave keeps one clipboard record for the editor modules, also over a
+; change of mission: CLIPBOARD_OPERATION with D1.w = CLIPBOARD_PUT, A0 = the
+; record and D2.w = its even length up to CLIPBOARD_BYTES (D0 = 0 kept), or
+; with D1.w = CLIPBOARD_GET and A0 = a target of CLIPBOARD_BYTES bytes
+; (D0.w = the record's length, 0 for none). The record is a copied block of
+; the map: BLOCK_MAGIC, its width and height in cells, the eight characters
+; that name the terrain's second tile set, and a tile number per cell.
+CLIPBOARD_OPERATION equ 13
+CLIPBOARD_PUT       equ 0
+CLIPBOARD_GET       equ 1
+BLOCK_MAGIC         equ $43464342
+BLOCK_WIDTH         equ 4
+BLOCK_HEIGHT        equ 6
+BLOCK_TERRAIN       equ 8
+BLOCK_CELLS         equ 16
+BLOCK_MAX_CELLS     equ 256
+CLIPBOARD_BYTES     equ BLOCK_CELLS+2*BLOCK_MAX_CELLS
 HILL_DISK           equ $16
 HILL_EDITOR_X       equ 58
 HILL_CUSTOM_X       equ 188

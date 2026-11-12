@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -13,7 +13,8 @@ edtr_request_large:
         move.w #AUR_PAGE_LARGE,-(sp)
         bra edtr_request_page
 ; Called only after an entered MENU confirmation and one-time receipt removal.
-; D4.w=cell index. Tile and unchanged canonical cell supply the replacement.
+; D4.w=cell index. Tile and unchanged canonical cell supply the replacement:
+; one cell of a long stroke, or the cells of a rectangle that asked first.
 edtr_large_commit:
         movem.l d1-d7/a0-a6,-(sp)
         clr.l TERRAIN_OP
@@ -30,11 +31,36 @@ edtr_large_commit:
         bmi.s .return
         bsr tu_confirm_large
         bmi.s .return
+        cmpi.w #AREA_TAG,AREA_PENDING
+        beq.s .area
         bsr tu_change
         bmi.s .return
-        bsr.s aur_mark_edit_result
+.result:
+        bsr aur_mark_edit_result
         bsr tu_end
         bra.s .return
+; A rectangle that asked first: D1.w is its top left cell, and its size
+; must lie inside the map.
+.area:
+        clr.w AREA_PENDING
+        moveq #0,d0
+        move.w d1,d0
+        divu editor_map_width,d0
+        move.w AREA_WIDTH,d2
+        beq.s .invalid
+        move.w AREA_HEIGHT,d3
+        beq.s .invalid
+        move.w d0,d4
+        add.w d3,d4
+        cmp.w editor_map_height,d4
+        bhi.s .invalid
+        swap d0
+        add.w d2,d0
+        cmp.w editor_map_width,d0
+        bhi.s .invalid
+        bsr block_fill
+        bmi.s .return
+        bra.s .result
 .invalid:
         moveq #-1,d0
 .return:

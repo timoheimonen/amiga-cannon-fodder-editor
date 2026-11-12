@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -102,7 +102,7 @@ cf_save_module_return:
         rts
 cf_save_editor_request:
         dc.b "cf_editor.mod",0,0,0
-        dc.l SAVE_RETURN_EDITOR_ID,EDITOR_SERIALIZER_BYTES
+        dc.l SAVE_RETURN_EDITOR_ID,EDITOR_MODULE_BYTES
 
 ; Broken author-owner invariants cannot fall into ordinary hill restoration.
 ; Invariant failure retains this SAVE frame in a noninteractive wait.

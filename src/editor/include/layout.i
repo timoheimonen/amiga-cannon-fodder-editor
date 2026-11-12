@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -48,6 +48,11 @@ EDITOR_READBACK_BASE         equ $0B51FA
 EDITOR_READBACK_BYTES        equ $003AF8
 EDITOR_SERIAL_WORK_BASE      equ $0B8CF2
 EDITOR_SERIAL_WORK_BYTES     equ $000508
+; The map view module alone is larger than the serializer bank: its code
+; runs on into READBACK and its view state starts above it. It never asks
+; for a file read while it is loaded, and its requesters name the whole
+; module bank as its capacity.
+EDITOR_MAP_VIEW_BYTES        equ $005000
 EDITOR_MANIFEST_BASE         equ $0BA1FA
 EDITOR_MANIFEST_BYTES        equ $001000
 

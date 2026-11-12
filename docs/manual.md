@@ -9,7 +9,7 @@ original campaign.
 Your campaign is set aside while you use the editor or play a custom mission,
 and it is restored exactly as it was when you return to the hill.
 
-This manual describes version 1.2.4 for WHDLoad.
+This manual describes version 1.2.5 for WHDLoad.
 
 ## Contents
 
@@ -107,6 +107,14 @@ Everything in the editor is done with the mouse; keys are shortcuts.
   dialog opened from another dialog it returns to that dialog.
 - Confirmations name what they will do, and messages say what happened and
   what you can do about it.
+- The **Help** key on the map shows the tools and the keys on two pages:
+
+  ![The first Help page](screenshots/help-tools.png)
+
+  **Keys** (or **K**) shows the second page and **Tools** (or **T**) the
+  first; **Close**, Return or Esc returns to the map. In an emulator the
+  Amiga's Help key is one of the PC keyboard's keys, often Page Down; the
+  emulator's keyboard settings name it.
 
 ## 2. Playing custom missions
 
@@ -203,7 +211,8 @@ second phase, **TRASH ENEMY HQ**. The new phase is added after the first one
 and opens in the editor. Click **Save** in the tool bar.
 
 **6. Look around.** Scroll the map with the arrow keys or by moving the
-pointer to the edge of the screen. Try the tools in the tool bar: Paint,
+pointer to the edge of the screen; hold **Shift** with the pointer at the
+edge to move a screen at a time. Try the tools in the tool bar: Paint,
 Fill, Object, Marker and Inspect, described in the following chapters. **Undo**
 (or the U key) takes back your last change.
 
@@ -232,8 +241,8 @@ rows.
 | Row | Contents |
 | --- | --- |
 | 1 | The tools **Paint**, **Fill**, **Object**, **Marker** and **Inspect** (the active one highlighted), and the map cell under the pointer (`X035 Y029`) |
-| 2 | **Undo**, **Tiles** (**Delete** in the Object tool), **Check**, **Test**, **Save** and **Menu** |
-| 3 | The selected tile and an information line: the tile number and its terrain class, the phase being edited (`Phase 2 of 2`) and `Unsaved` while there are changes that are not saved. In the other tools it shows the selected object, the marker class or the cell's terrain data instead |
+| 2 | **Undo**, **Tiles** (**Delete** in the Object tool), **Check**, **Test**, **Save** and **Menu**; the keys **U**, **T**, **C**, **G**, **S** and **Esc** do the same (**Del** deletes) |
+| 3 | The selected tile and an information line: the tile number and its terrain class, the phase being edited (`Phase 2 of 2`) and `Unsaved` while there are changes that are not saved. In the other tools it shows the selected object, the marker class or the cell's terrain data instead. While the pointer is on the tool bar, the Marker and Object tools show here how much of the phase's limits is in use ([markers](#markers), [objects](#6-objects)) |
 
 Clicking the selected tile, **Tiles**, or the active Paint or Fill tool opens
 the [tile page](#the-tile-page); clicking the active Object tool opens the
@@ -246,7 +255,12 @@ the [tile page](#the-tile-page); clicking the active Object tool opens the
 | Arrow keys | One cell per press; hold to repeat |
 | Pointer at the left, right or top edge of the screen | In that direction |
 | Pointer at the very bottom of the screen, on the information line | Down |
-| Pointer on the bottom rows of the map while painting or dragging | Down |
+| Pointer on the bottom rows of the map while painting, dragging, selecting an area or dragging a rectangle | Down |
+| **Shift** held while the pointer scrolls | A screen at a time instead of one cell |
+
+Shift speeds up the pointer only: the arrow keys always scroll one cell.
+While you select an area to copy or drag a rectangle, the map scrolls one
+cell at a time.
 
 The buttons lie above the scrolling zone, so moving the pointer to a button
 never scrolls the map. When a page or dialog closes with the pointer already
@@ -292,7 +306,7 @@ A tile shown as `Mixed` uses two classes, each in its own part of the tile
 
 | Tool | Key | Left button | Right button |
 | --- | --- | --- | --- |
-| **Paint** | F1 | Paint the selected tile; drag to paint a stroke | Pick up the tile under the pointer |
+| **Paint** | F1 | Paint the selected tile; drag to paint a stroke; with Shift, paint a rectangle ([Rectangles](#rectangles)) | Pick up the tile under the pointer; with Shift, select an area ([Copy and paste](#copy-and-paste)) |
 | **Fill** | F2 | Fill the connected area of the same tile with the selected tile | Pick up the tile under the pointer |
 
 A whole stroke is one step for Undo, and so is a fill.
@@ -307,6 +321,58 @@ A fill that covers a very large area cannot be undone. The editor asks first:
 
 **Continue** fills and clears the undo history; **Cancel** (the default)
 leaves the map unchanged.
+
+### Rectangles
+
+To cover an area with one tile, drag a rectangle in Paint:
+
+1. Hold **Shift** and press the **left button** on one corner of the area.
+2. Drag to the opposite corner. A frame shows the area and the information
+   line its size, for example `Area 8x5`. You can let go of Shift. At a
+   screen edge the map scrolls one cell at a time while you drag.
+3. Release the button. Every cell of the area gets the selected tile.
+
+![A rectangle of jungle painted across the river, and a second one being dragged below it](screenshots/rectangle.png)
+
+The whole rectangle is one step for Undo. To give a rectangle up while you
+drag it, press the right button.
+
+A rectangle of more than 256 cells (16 by 16 has exactly 256) cannot be
+undone, so the editor asks first with the Large change question shown
+above.
+
+### Copy and paste
+
+Buildings, bridges and other shapes are made of several tiles. In Paint you
+can copy an area of the map and stamp it elsewhere:
+
+1. Hold **Shift** and press the **right button** on one corner of the area.
+2. Drag to the opposite corner. The information line shows the size, for
+   example `Area 5x4`. You can let go of Shift. At a screen edge the map
+   scrolls one cell at a time while you select.
+3. Release the button. The area is now Paint's brush and the line shows
+   `Block 5x4`.
+4. Move the pointer to where the top left cell of the copy should go and
+   press the **left button**. Each press stamps the block once.
+
+A frame on the map shows the area while you select it, and then the place
+where the block would land.
+
+![A piece of jungle copied onto the grass, inside the block's frame](screenshots/copy-paste.png)
+
+A stamp changes only the tiles, like Paint: objects and markers stay as they
+are. One stamp is one step for Undo. A block that reaches over the edge of
+the map is cut off there.
+
+An area can have at most 256 cells, for example 16 by 16. A larger one is
+not copied: `Area too large: 256 cells at most.`
+
+A right click picks up the tile under the pointer, and Paint has a single
+tile again. The same happens when you choose another tool or open a page or
+the menu. Press **V** to get the copied block back. The copy is kept until
+you quit the game, so you can also press V in another phase or another
+mission and stamp the block there, as long as it has the same terrain
+(`Copied from another terrain.` otherwise).
 
 ## 6. Objects
 
@@ -344,13 +410,20 @@ made of several parts are placed, moved and deleted as one object.
 | Select an object | Left-click it. The information line shows its name and type number |
 | Move an object | Drag it with the left button |
 | Delete the selected object | **Delete** in the tool bar, or the **Del** key |
+| Go to the next object | The **Tab** key selects the next object of the phase and shows it in the middle of the screen; after the last object it starts from the first |
 | Pick up a type from the map | Right-click an object; its type becomes the selected type |
 
 ![The tool bar with a selected object and its Delete button](screenshots/bar-object.png)
 
 A phase has room for at most 43 object parts; people and vehicles must be
-among the first 30, and the squad has at most eight soldiers. A placement that
-does not fit is refused:
+among the first 30, and the squad has at most eight soldiers. Move the
+pointer onto the tool bar to see how much is in use:
+
+![The tool bar counting the parts, units and squad of the phase](screenshots/bar-counts.png)
+
+`Parts` counts every part of the phase's objects (a building with its door
+and roof is several parts), `Units` the parts up to the last person or
+vehicle, and `Squad` your soldiers. A placement that does not fit is refused:
 
 ![The Object not placed message](screenshots/object-not-placed.png)
 
@@ -385,8 +458,8 @@ when you choose one:
 
 ### Markers
 
-Markers are invisible cells that change where enemies can see your squad.
-Choose the **Marker** tool with **F4**. The information line first reminds you
+Markers are cells that change where enemies can see your squad. The game
+does not show them. Choose the **Marker** tool with **F4**. The information line first reminds you
 what markers do (`Markers change enemy sight: test the phase.`) and shows the
 marker class of the cell once you move the pointer over the map.
 
@@ -399,9 +472,18 @@ The information line shows the marker class of the cell:
 
 ![The tool bar of the Marker tool](screenshots/bar-marker.png)
 
-A phase can have at most ten marker cells. Markers are not drawn on the map;
-**Check** lists every marker cell with its position, and **Show on map**
-takes you there. Always test a phase after changing its markers.
+While the Marker tool is active, every marker cell on the map has a frame
+and its class number in the top left corner:
+
+![Marker cells on the map](screenshots/markers-on-map.png)
+
+The other tools show the map without them. An object is drawn over the mark
+of its cell.
+
+A phase can have at most ten marker cells; with the pointer on the tool bar
+the information line counts them (`Markers 3/10`). **Check** also lists every
+marker cell with its position, and **Show on map** takes you there. Always
+test a phase after changing its markers.
 
 ### Inspect
 
@@ -526,7 +608,7 @@ kind of confirmation. Nothing is ever deleted without asking.
 
 ### Save and Save as
 
-**Save** (the tool bar button or the menu item) writes the mission to
+**Save** (the tool bar button, the **S** key or the menu item) writes the mission to
 `Custom`. A panel names the mission while it is checked; then the screen
 stays dark for a few seconds while WHDLoad writes the files. The information
 line says `Saved.` afterwards and no longer shows `Unsaved`. You can always
@@ -608,8 +690,9 @@ not available:
 ![Reordering phases: Done applies the new order first](screenshots/phases-moved.png)
 
 Save the mission after changing its phases. A phase that has never been saved
-must be saved before another phase can be added (`Save before adding a
-phase`).
+must be saved before another phase can be added: the editor asks (`Save
+before adding a phase`), and **Save** saves the mission and goes on to add
+the phase.
 
 ### Mission and phase settings
 
@@ -661,7 +744,7 @@ when the settings were opened from the editor menu.
 
 ### Check
 
-**Check** in the tool bar examines the whole mission and lists every problem:
+**Check** in the tool bar (or the **C** key) examines the whole mission and lists every problem:
 
 ![Check results: six points to review](screenshots/check.png)
 
@@ -688,7 +771,7 @@ not saved with the mission.
 
 ### Test
 
-**Test** saves the mission and plays the phase you are editing, starting with
+**Test** (or the **G** key) saves the mission and plays the phase you are editing, starting with
 its briefing. Press **Esc** during play to abort.
 
 ![Test play of the second phase](screenshots/test-play.png)
@@ -777,7 +860,7 @@ ID the mission got.
 | Title | Meaning |
 | --- | --- |
 | Unsaved changes | The action would lose changes; Save, Don't save or Cancel |
-| Save before adding a phase | The phase being edited has never been saved; save first |
+| Save before adding a phase | The phase being edited has never been saved; Save saves it and adds the new phase, Cancel returns |
 | Large change | The change cannot be undone; Continue clears the undo history |
 | Marker limit | The phase already has ten markers |
 | Last object | The phase must keep at least one object |
@@ -799,13 +882,22 @@ ID the mission got.
 | T | Map | Tile page |
 | O | Map | Object page |
 | U | Map | Undo |
+| V | Map | Paint with the copied block again |
+| Shift + left button | Map, Paint | Drag a rectangle of the selected tile |
+| Shift + right button | Map, Paint | Select an area to copy |
+| C | Map | Check |
+| G | Map | Test (go) |
+| S | Map | Save |
 | Del | Map | Delete the selected object |
+| Tab | Map, Object | Select the next object and show it |
 | Arrow keys | Map | Scroll one cell per press |
+| Shift | Map | With the pointer at a screen edge: scroll a screen at a time |
 | Arrow keys | Lists and pages | Move the selection or scroll; left and right change the object group |
 | Arrow keys | Dialogs | Move the yellow frame to another button (in lists: the keys the list does not use) |
 | Underlined letter | Dialogs | Choose that button (not in title entry, where letters type) |
 | Double click | Lists | Play, edit or open the mission, edit the phase, show the problem on the map |
 | Esc | Map | Open the menu |
+| Help | Map | The Help pages |
 | Esc | Dialogs and pages | Cancel or close |
 | Return | Dialogs | Choose the framed button (the default unless the arrow keys moved the frame) |
 | Left, Right | Title entry | Keep the selected title and edit it |

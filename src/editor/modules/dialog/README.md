@@ -1,4 +1,4 @@
-<!-- Cannon Fodder In-Game Level Editor V1.2.4
+<!-- Cannon Fodder In-Game Level Editor V1.2.5
 Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 Licensed under the MIT License. See the LICENSE file for details. -->
 
@@ -41,6 +41,11 @@ cursor keys that a list does not take, which move the default frame. A
 button is chosen on the release of the left button over it; list rows and
 repeating buttons act on the press. The service's `DIALOG_SET` function changes one button's state or
 label while the dialog is open (selected terrain, steppers at their limits).
+
+`DIALOG_HELP` opens a Help page, a dialog whose descriptor and text the
+Slave holds; D2 is the page. Its buttons return 0 to close and
+`DIALOG_HELP_PAGE` plus a page number to show that page, which replaces the
+open one in place. The menu module calls it for the Help key.
 
 ## Descriptor
 

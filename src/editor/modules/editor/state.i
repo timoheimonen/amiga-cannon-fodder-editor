@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -19,6 +19,8 @@ EDTR_SAVE_FILES          equ -47
 EDTR_SAVE_QUOTA          equ -48
 ; An object placement refused because the phase has no room for it.
 OBJECT_NO_ROOM           equ -49
+; The Help key: a message whose dialog is the Slave's Help pages.
+EDTR_HELP                equ -50
 ; edtr_notice value after a verified Save: the bar shows SAVED in place of
 ; the cell readout (cursor $FFFF) until the pointer next moves over the map.
 EDTR_NOTICE_SAVED        equ $5356
@@ -42,10 +44,15 @@ PREVIEW_MASK            equ $77480
 ; The H anchor glyph cache lies below the 48-line tool bar.
 BAR_FONT_STRIP          equ 48*40
 
-saved_copper            equ EDITOR_READBACK_BASE
+; The view state lies in READBACK, which no file read touches while a view
+; is open. The map view module sets its own base, above its code.
+        ifnd VIEW_STATE_BASE
+VIEW_STATE_BASE         equ EDITOR_READBACK_BASE
+        endif
+saved_copper            equ VIEW_STATE_BASE
 font_table              equ saved_copper+3072
 font_frames             equ font_table+56
-preview_state           equ EDITOR_READBACK_BASE+3728
+preview_state           equ VIEW_STATE_BASE+3728
 parts                   equ preview_state+3216
 edtr_state              equ parts+64
 saved_active            equ edtr_state
@@ -72,7 +79,6 @@ edtr_troop_x            equ edtr_state+112
 edtr_troop_y            equ edtr_state+114
 view_origin_x           equ edtr_state+116
 view_origin_y           equ edtr_state+118
-edtr_notice             equ edtr_state+120
 terrain_font_ink         equ edtr_state+122
 saved_cursor_offsets    equ edtr_state+124
 edtr_state_end          equ edtr_state+128
@@ -94,6 +100,24 @@ TERRAIN_SCROLL_ARMED    equ EDITOR_UI_BASE+16
 ; Each change of the cursor cell counts it down; the first one may only bring
 ; the cursor to the pointer.
 TERRAIN_MARKER_HINT     equ EDITOR_UI_BASE+18
+; Bit 0 is set while the pointer is on the tool bar: the information line
+; then shows the phase's counts.
+TERRAIN_ON_BAR          equ EDITOR_UI_BASE+21
+; The map view's result for the view that opens next. It lies here and not
+; in the view state because the map view hands it to the Object view, whose
+; view state has another base.
+edtr_notice             equ EDITOR_UI_BASE+22
+; Paint's brush is a block of this many cells when the width is not zero.
+TERRAIN_BLOCK_W         equ EDITOR_UI_BASE+24
+TERRAIN_BLOCK_H         equ EDITOR_UI_BASE+26
+; The cell where the selection of an area began, and nonzero while a
+; button holds the selection open: 1 the right button, to copy the area,
+; 2 the left button, to paint it.
+TERRAIN_SELECT_X        equ EDITOR_UI_BASE+28
+TERRAIN_SELECT_Y        equ EDITOR_UI_BASE+30
+TERRAIN_SELECT          equ EDITOR_UI_BASE+32
+; Nonzero when the information line says why a copy or a recall did nothing.
+TERRAIN_BLOCK_NOTICE    equ EDITOR_UI_BASE+34
 TERRAIN_UI_END          equ EDITOR_UI_BASE+80
 
 ; The terrain stamp, in the resident's spare bytes: after a complete asset
@@ -105,7 +129,14 @@ TERRAIN_STAMP_TAG       equ $5445524E
 TERRAIN_STAMP_NAMES     equ TERRAIN_STAMP+4
 TERRAIN_STAMP_SUM       equ TERRAIN_STAMP+36
 TERRAIN_STAMP_BYTES     equ 40
-        ifgt TERRAIN_STAMP_BYTES-EDITOR_SPARE_BYTES
+; After the stamp: the size of a rectangle that asks before it is painted.
+; It must outlive the question, which another module shows; the page request
+; carries the area's top left cell.
+AREA_PENDING            equ TERRAIN_STAMP+TERRAIN_STAMP_BYTES
+AREA_TAG                equ $4152
+AREA_WIDTH              equ AREA_PENDING+2
+AREA_HEIGHT             equ AREA_PENDING+4
+        ifgt TERRAIN_STAMP_BYTES+6-EDITOR_SPARE_BYTES
         fail "Terrain stamp exceeds the spare bytes"
         endif
 ; Base and sub BLK graphics, the base palette and the base and sub SWP, BHT

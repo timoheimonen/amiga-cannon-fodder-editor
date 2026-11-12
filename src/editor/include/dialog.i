@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -30,6 +30,11 @@ DIALOG_DRAW         equ 4
 ; D2.w=button index, D3.w=new state (UI_NORMAL, UI_ACTIVE or UI_DISABLED),
 ; A0=new label or 0 to keep it. Redraws the button.
 DIALOG_SET          equ 5
+; D2.w=page. Opens a Help page that the Slave holds, as DIALOG_OPEN opens a
+; descriptor; all pages have one band, so a page replaces another in place.
+; DIALOG_POLL then returns 0 to close and DIALOG_HELP_PAGE+n to show page n.
+DIALOG_HELP         equ 6
+DIALOG_HELP_PAGE    equ $100
 
 ; Descriptor, word aligned; addresses are absolute.
 DIALOG_TOP          equ 0   ; first screen row of the band, at least 8

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.4
+; Cannon Fodder In-Game Level Editor V1.2.5
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -9,7 +9,8 @@ OBJECT_GRAB_Y equ EDITOR_UI_BASE+86
         ifgt OBJECT_GRAB_Y+2-EDITOR_UI_BASE-EDITOR_UI_BYTES
         fail "Object input state exceeds UI scratch"
         endif
-; D0=0 idle,1 Save,2 Menu,3 Tiles,4 Objects,5 terrain Undo,6 tool change.
+; D0=0 idle,1 Save,2 Menu,3 Tiles,4 Objects,5 terrain Undo,6 tool change,
+; 7 Check,8 Test.
 ; Negative results leave the restored view for EDTR's status receiver.
 ; Raw Delete is Amiga key$46; a held key produces one deletion until released.
 object_input:
@@ -32,6 +33,23 @@ object_input:
         beq .tiles
         cmpi.w #'O',d0
         beq .objects
+        ; C, G and S act as the Check, Test and Save buttons.
+        moveq #7,d1
+        cmpi.w #'C',d0
+        beq .command
+        moveq #8,d1
+        cmpi.w #'G',d0
+        beq .command
+        moveq #1,d1
+        cmpi.w #'S',d0
+        beq .command
+        ; The Help key leaves as a message does.
+        moveq #EDTR_HELP,d1
+        cmpi.w #$DF,d0
+        beq .command
+        ; Tab selects the next object.
+        cmpi.w #$C2,d0
+        beq .next
         subi.w #$D0,d0
         cmpi.w #4,d0
         bhi.s .raw
@@ -63,6 +81,10 @@ object_input:
         move.w native_mouse_y,d1
         cmpi.w #192,d1
         bhs .bar
+        bclr #0,TERRAIN_ON_BAR
+        beq.s .on_map
+        ori.w #1,TERRAIN_BAR_DIRTY
+.on_map:
         move.w d0,-(sp)
         moveq #-1,d0
         bsr bar_hover
@@ -173,6 +195,10 @@ object_input:
         subi.w #192,d1
         bsr bar_hit
         bsr bar_hover
+        bset #0,TERRAIN_ON_BAR
+        bne.s .on_bar
+        ori.w #1,TERRAIN_BAR_DIRTY
+.on_bar:
         tst.w d5
         beq .idle
         tst.w d0
@@ -201,6 +227,12 @@ object_input:
         bra .return
 .validation:
         moveq #7,d0
+        bra .return
+; A command key: D1.w is its result. It ends a drag instead, as Esc does.
+.command:
+        tst.w OBJECT_DRAG_INDEX
+        bpl.s .cancel_drag
+        move.w d1,d0
         bra .return
 .outside:
         move.w d0,-(sp)
@@ -276,6 +308,83 @@ object_input:
         moveq #EDTR_VISUAL_ERROR,d0
 .return:
         movem.l (sp)+,d1-d7/a0-a6
+        tst.w d0
+        rts
+; Tab: the object after the selected one, or the first after the last, is
+; selected as a click selects it and comes to the middle of the view. It
+; ends a drag instead, as a command key does.
+.next:
+        tst.w OBJECT_DRAG_INDEX
+        bpl .cancel_drag
+        bsr object_next
+        bmi .idle
+        bsr restore_item
+        clr.w preview_state+pv_count
+        move.w d0,AUR_BASE+AUR_OBJECT_INDEX
+        move.w 8(a0),AUR_BASE+AUR_OBJECT_TYPE
+        move.w 4(a0),d0
+        addi.w #16,d0
+        lsr.w #4,d0
+        subi.w #9,d0
+        move.w 6(a0),d1
+        lsr.w #4,d1
+        subq.w #6,d1
+        bsr scroll_clamp
+        bsr set_camera
+        bne .error
+        bra .repaint
+
+; D0.w=the first object after the selected one that a click could select,
+; the first of all when none follows, -1 when the phase has none; A0=its
+; record. An object is its root record: the companions of a bundle follow
+; it and are stepped over. Preserves the other registers.
+object_next:
+        movem.l d1-d7/a1-a6,-(sp)
+        moveq #0,d6
+        move.w EDITOR_METADATA_BASE+CFMD_SPT_BYTES,d6
+        divu #10,d6
+        move.w AUR_BASE+AUR_OBJECT_INDEX,d5
+        moveq #-1,d3
+        suba.l a3,a3
+        moveq #0,d7
+        lea EDITOR_SPT_BASE,a5
+.root:
+        cmp.w d6,d7
+        bhs.s .wrap
+        move.w 8(a5),d0
+        move.w d0,d1
+        add.w d1,d1
+        lea op_part_index(pc),a0
+        tst.w 0(a0,d1.w)
+        beq.s .step
+        cmpi.w #$7FEF,4(a5)
+        bhi.s .step
+        tst.w 6(a5)
+        bmi.s .step
+        tst.w d3
+        bpl.s .seen
+        move.w d7,d3
+        movea.l a5,a3
+.seen:
+        cmp.w d5,d7
+        bgt.s .found
+.step:
+        lsl.w #2,d0
+        lea ot_shared_recipes(pc),a0
+        move.b 0(a0,d0.w),d0
+        andi.w #3,d0
+        addq.w #1,d0
+        add.w d0,d7
+        mulu #10,d0
+        adda.w d0,a5
+        bra.s .root
+.wrap:
+        move.w d3,d7
+        movea.l a3,a5
+.found:
+        movea.l a5,a0
+        move.w d7,d0
+        movem.l (sp)+,d1-d7/a1-a6
         tst.w d0
         rts
 
