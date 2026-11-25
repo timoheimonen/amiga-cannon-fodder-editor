@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -84,6 +84,12 @@ dlg_messages:
         dc.l dlg_last_object
         dc.w OBJECT_NO_ROOM
         dc.l dlg_no_room
+        dc.w OBJECT_NO_PARTS
+        dc.l dlg_no_parts
+        dc.w OBJECT_NO_UNITS
+        dc.l dlg_no_units
+        dc.w OBJECT_NO_SQUAD
+        dc.l dlg_no_squad
         dc.w EDTR_SAVE_FILES
         dc.l dlg_save_files
         dc.w EDTR_SAVE_QUOTA
@@ -93,14 +99,15 @@ dlg_messages:
         dc.w 0
 
 ; Two columns split near X 152, rows every 20 lines from Y 72; buttons of
-; the lower dialogs on Y 128. Settings and Close share the last row. The
-; menu's title strip has a second line for the version and the author; the
-; panel grows upwards for it, so the buttons keep their places.
+; the lower dialogs on Y 128. Settings and Help share the fifth row, Close
+; spans the sixth. The menu's title strip has a second line for the version
+; and the author; the panel grows upwards for it, so the buttons keep their
+; places.
 DLG_MENU_TOP        equ DLG_TOP-10
 dlg_menu:
-        dc.w DLG_MENU_TOP,134,UI_SELECT
+        dc.w DLG_MENU_TOP,154,UI_SELECT
         dc.l dlg_menu_title,dlg_menu_body
-        dc.w 9,0,10
+        dc.w 10,0,11
         dc.w 20,72,128,18,4,UI_NORMAL
         dc.l dlg_new_label
         dc.w 156,72,128,18,5,UI_NORMAL
@@ -119,14 +126,16 @@ dlg_menu:
         dc.l dlg_exit_hill_label
         dc.w 20,152,128,18,9,UI_NORMAL
         dc.l dlg_settings_label
-        dc.w 156,152,128,18,0,UI_NORMAL
+        dc.w 156,152,128,18,10,UI_NORMAL
+        dc.l dlg_help_label
+        dc.w 20,172,264,18,0,UI_NORMAL
         dc.l dlg_close_label
 dlg_menu_body:
         dc.w UI_RECT,0,DLG_MENU_TOP+13,320,10,UI_SELECT
         dc.w UI_TEXT_AT,148,DLG_MENU_TOP+4,148,UI_ACCENT,UI_RIGHT
         dc.l EXIT_TEXT
         dc.w UI_TEXT,8,DLG_MENU_TOP+14,296,UI_LIGHT,UI_LEFT
-        dc.b "V1.2.5 by Timo Heimonen (timo.heimonen@proton.me)",0
+        dc.b "V1.2.6 by Timo Heimonen (timo.heimonen@proton.me)",0
         even
         dc.w UI_END
 
@@ -233,6 +242,51 @@ dlg_no_room_body:
         even
         dc.w UI_END
 
+dlg_no_parts:
+        dc.w DLG_TOP,DLG_HEIGHT,UI_SELECT
+        dc.l dlg_no_room_title,dlg_no_parts_body
+        dc.w 0,0,1
+        dc.w 116,128,72,14,0,UI_NORMAL
+        dc.l dlg_ok_label
+dlg_no_parts_body:
+        dc.w UI_TEXT,16,76,288,UI_INK,UI_LEFT
+        dc.b "Object part limit reached (43 parts).",0
+        even
+        dc.w UI_TEXT,16,88,288,UI_INK,UI_LEFT
+        dc.b "Delete an object to free part slots.",0
+        even
+        dc.w UI_END
+
+dlg_no_units:
+        dc.w DLG_TOP,DLG_HEIGHT,UI_SELECT
+        dc.l dlg_no_room_title,dlg_no_units_body
+        dc.w 0,0,1
+        dc.w 116,128,72,14,0,UI_NORMAL
+        dc.l dlg_ok_label
+dlg_no_units_body:
+        dc.w UI_TEXT,16,76,288,UI_INK,UI_LEFT
+        dc.b "Unit slot limit reached (first 30 slots).",0
+        even
+        dc.w UI_TEXT,16,88,288,UI_INK,UI_LEFT
+        dc.b "People and vehicles must fit in slots 1-30.",0
+        even
+        dc.w UI_END
+
+dlg_no_squad:
+        dc.w DLG_TOP,DLG_HEIGHT,UI_SELECT
+        dc.l dlg_no_room_title,dlg_no_squad_body
+        dc.w 0,0,1
+        dc.w 116,128,72,14,0,UI_NORMAL
+        dc.l dlg_ok_label
+dlg_no_squad_body:
+        dc.w UI_TEXT,16,76,288,UI_INK,UI_LEFT
+        dc.b "Squad limit reached (8 soldiers).",0
+        even
+        dc.w UI_TEXT,16,88,288,UI_INK,UI_LEFT
+        dc.b "A phase can have at most eight soldiers.",0
+        even
+        dc.w UI_END
+
 dlg_save_files:
         dc.w DLG_TOP,DLG_HEIGHT,UI_ERROR
         dc.l dlg_not_saved_title,dlg_files_body
@@ -335,6 +389,7 @@ dlg_resize_label: dc.b "_Resize map...",0
 dlg_phases_label: dc.b "Mission _phases...",0
 dlg_exit_hill_label: dc.b "E_xit to hill",0
 dlg_settings_label: dc.b "S_ettings...",0
+dlg_help_label: dc.b "_Help...",0
 dlg_close_label: dc.b "_Close",0
 dlg_unsaved_title: dc.b "Unsaved changes",0
 dlg_discard_label: dc.b "_Don't save",0

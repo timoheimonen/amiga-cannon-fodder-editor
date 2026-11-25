@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -11,11 +11,12 @@ VD_METADATA         equ VD_STAGE_SPT+432
 VD_SUMMARIES        equ VD_METADATA+256
 VD_ROWS             equ VD_SUMMARIES+240
 VD_CONTEXT          equ VD_ROWS+192
-; Inputs: inclusive global first ordinal, global base and capacity1..12.
+; Inputs: inclusive global first ordinal, global base, capacity 1..12 and
+; severity filter (0 = all, 1 = errors only, 2 = reviews only).
 VD_SKIP             equ VD_CONTEXT
 VD_BASE             equ VD_CONTEXT+4
 VD_CAPACITY         equ VD_CONTEXT+8
-VD_RESERVED         equ VD_CONTEXT+10
+VD_FILTER           equ VD_CONTEXT+10
 ; Outputs: exclusive global ordinal, row count, structural status, CFVR32.
 VD_TOTAL            equ VD_CONTEXT+12
 VD_WRITTEN          equ VD_CONTEXT+16

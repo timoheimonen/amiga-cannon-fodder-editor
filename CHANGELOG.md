@@ -1,5 +1,45 @@
 # Changelog
 
+## V1.2.6 25-11-2026
+
+- Overview minimap: `M` in the map or Object tool opens a colour-coded
+  overview of the whole phase (terrain passability, soldiers, enemies, other
+  objects and the yellow viewport frame). Click anywhere on the minimap to
+  jump the camera there.
+- Terrain-class overlay: `P` in the map view toggles a view-only passability
+  overlay (`[P]` in the bar) that marks non-Ground cells with compact badges
+  (`B`, `W`, `S`, `R`, `D`, `Q`, `M`, `+`) without altering the map.
+- Redo and Undo across Test: `Y` redoes undone terrain and object changes
+  (about 256 steps), and both Undo and Redo histories survive `Test`.
+- Faster and safer Test: `Test` starts immediately without saving again when
+  the mission is already clean on disk, and checks a dirty or unsaved phase
+  for play-blocking errors before saving so errors open Check right away.
+- Selected-object navigation: high-contrast corner brackets frame the
+  selected object on the map, the information line shows its ordinal
+  (`n/total`), and `B` or `Shift+Tab` cycles backwards through objects.
+- Clearer Check, Object and Inspect feedback: Check lists errors first in red
+  and `Show on map` switches to Marker or Object with the issue selected;
+  Inspect shows readable terrain class names and right-clicking picks up the
+  tile; placement limits name whether `Parts`, `Units` or `Squad` was
+  reached, refused multi-part moves explain why in the bar, and the object
+  page shows each item's part count and unit slot usage.
+- Page and dialog ergonomics: Settings separates mission-wide and
+  phase-specific fields and adds keyboard shortcuts (`M`, `N`, `1`-`8`, `G`,
+  `R`, `E`, `O`, `C`, `D`); title entry supports an intra-string cursor with
+  `Left`, `Right`, `Del` and `Backspace`; the tile page draws a dotted hover
+  outline and supports arrow keys with `Return`; the Template list shows each
+  mission and phase's terrain family and map size.
+- Interaction and Help improvements: `H` on the map and `Help...` in the
+  editor menu open the Help pages; `Esc` cancels an open rectangle, copy
+  selection or block brush before opening the menu; `V` recalls the copied
+  block from the Object tool as well; copy-area dragging shows `(>256)` live
+  above 256 cells; `Saved.` appears in every tool; Up/Down arrow keys move
+  selection with partial redraws on the object page; picking a tile from
+  Marker or Inspect switches to Paint; Marker refreshes the tile thumbnail
+  live; toolbar command buttons act on release and list `Up`/`Down` buttons
+  repeat while held; dialogs keep keyboard focus when a default button is
+  disabled (and `Mission files` defaults to `Back`).
+
 ## V1.2.5 12-11-2026
 
 - Copy and paste in Paint: Shift with a right drag selects an area of at

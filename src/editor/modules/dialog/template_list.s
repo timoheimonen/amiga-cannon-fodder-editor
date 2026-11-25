@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -135,16 +135,17 @@ tpl_list_event:
         movem.l (sp)+,d1/a0
         rts
 
-; The heading and the page of eight titles around the current choice.
+; The heading, the page of eight titles and the selected template's terrain
+; family and size.
 tpl_list_draw:
         movem.l d0-d7/a0-a2,-(sp)
         lea EXIT_LIST,a0
         move.w #UI_RECT,(a0)+
-        move.l #(8<<16)|46,(a0)+
+        move.l #(8<<16)|34,(a0)+
         move.l #(296<<16)|UI_LINE_HEIGHT,(a0)+
         move.w #UI_PANEL,(a0)+
         move.w #UI_TEXT_AT,(a0)+
-        move.l #(12<<16)|46,(a0)+
+        move.l #(12<<16)|34,(a0)+
         move.l #(288<<16)|UI_DIM,(a0)+
         move.w #UI_LEFT,(a0)+
         lea tpl_missions_heading(pc),a1
@@ -154,7 +155,7 @@ tpl_list_draw:
         move.l a1,(a0)+
         ; "Phases of " is ten cells wide; the mission title follows it.
         move.w #UI_TEXT_AT,(a0)+
-        move.l #(72<<16)|46,(a0)+
+        move.l #(72<<16)|34,(a0)+
         move.l #(180<<16)|UI_INK,(a0)+
         move.w #UI_LEFT_CLIPPED,(a0)+
         move.w TPL_MISSION,d0
@@ -170,6 +171,7 @@ tpl_list_draw:
         move.w TPL_PHASE,d6
 .current:
         bsr tpl_position
+        bsr tpl_detail
         ; Previous and Next while there is another page.
         move.w d6,d7
         andi.w #-TPL_ROWS,d7
@@ -232,7 +234,7 @@ tpl_position:
         lea -32(sp),sp
         movea.l sp,a0
         move.w #UI_TEXT,(a0)+
-        move.l #(240<<16)|46,(a0)+
+        move.l #(240<<16)|34,(a0)+
         move.l #(60<<16)|UI_DIM,(a0)+
         move.w #UI_RIGHT,(a0)+
         move.w d6,d0
@@ -252,6 +254,101 @@ tpl_position:
         lea 32(sp),sp
         movem.l (sp)+,d0/a0-a1
         rts
+
+; Terrain family and size (or phase count) of the highlighted template on Y122.
+tpl_detail:
+        movem.l d0-d5/a0-a2,-(sp)
+        lea -80(sp),sp
+        movea.l sp,a0
+        move.w #UI_RECT,(a0)+
+        move.l #(8<<16)|121,(a0)+
+        move.l #(296<<16)|9,(a0)+
+        move.w #UI_PANEL,(a0)+
+        move.w #UI_TEXT,(a0)+
+        move.l #(12<<16)|122,(a0)+
+        move.l #(288<<16)|UI_ACCENT,(a0)+
+        move.w #UI_LEFT,(a0)+
+        move.w TPL_MISSION,d0
+        moveq #0,d1
+        tst.w TPL_PICK_PHASE
+        beq.s .lookup
+        move.w TPL_PHASE,d1
+.lookup:
+        bsr template_lookup
+        bmi .empty
+        move.w d0,d2
+        move.w d1,d3
+        subq.w #1,d2
+        mulu #3,d2
+        lea tpl_map_info(pc),a2
+        adda.w d2,a2
+        moveq #0,d4
+        move.b (a2),d4
+        move.w d4,d0
+        bsr.s .append_family
+        tst.w TPL_PICK_PHASE
+        bne.s .show_size
+        ; Check whether later phases in this mission use another terrain family.
+        move.w d3,d5
+        subq.w #1,d5
+        beq.s .show_single
+        movea.l a2,a1
+.scan:
+        addq.l #3,a1
+        cmp.b (a1),d4
+        beq.s .scan_next
+        move.b #'/',(a0)+
+        moveq #0,d0
+        move.b (a1),d0
+        bsr.s .append_family
+        bra.s .show_phases
+.scan_next:
+        subq.w #1,d5
+        bne.s .scan
+.show_phases:
+        lea tpl_sep(pc),a1
+        bsr dialog_copy
+        move.w d3,d0
+        bsr dialog_number
+        lea tpl_phases_suffix(pc),a1
+        bsr dialog_copy
+        bra.s .finish
+.show_single:
+        bsr.s .append_size
+        lea tpl_one_phase(pc),a1
+        bsr dialog_copy
+        bra.s .finish
+.show_size:
+        bsr.s .append_size
+        lea tpl_cells_suffix(pc),a1
+        bsr dialog_copy
+.finish:
+        addq.l #2,a0
+        move.l a0,d0
+        bclr #0,d0
+        movea.l d0,a0
+        clr.w (a0)
+        movea.l sp,a0
+        bsr dialog_draw
+.empty:
+        lea 80(sp),sp
+        movem.l (sp)+,d0-d5/a0-a2
+        rts
+.append_family:
+        add.w d0,d0
+        lea tpl_family_names(pc),a1
+        adda.w (a1,d0.w),a1
+        bra dialog_copy
+.append_size:
+        lea tpl_sep(pc),a1
+        bsr dialog_copy
+        moveq #0,d0
+        move.b 1(a2),d0
+        bsr dialog_number
+        move.b #'x',(a0)+
+        moveq #0,d0
+        move.b 2(a2),d0
+        bra dialog_number
 
 ; D0.w mission -> A1 its title in the game's table.
 tpl_mission_title:
@@ -278,26 +375,26 @@ tpl_table_title:
 .out:
         rts
 
-; Prev, Next, Use and Back keep their old hit zones on Y132-147.
+; Prev, Next, Use and Back keep their old hit zones on Y134-147.
 dlg_template:
-        dc.w 30,126,UI_SELECT
+        dc.w 18,138,UI_SELECT
         dc.l tpl_title,0
         dc.w 10,0,12
-        dc.w 8,58,292,9,TPL_ROW,UI_NORMAL|DIALOG_ROW
+        dc.w 8,46,292,9,TPL_ROW,UI_NORMAL|DIALOG_ROW
         dc.l tpl_none
-        dc.w 8,67,292,9,TPL_ROW+1,UI_NORMAL|DIALOG_ROW
+        dc.w 8,55,292,9,TPL_ROW+1,UI_NORMAL|DIALOG_ROW
         dc.l tpl_none
-        dc.w 8,76,292,9,TPL_ROW+2,UI_NORMAL|DIALOG_ROW
+        dc.w 8,64,292,9,TPL_ROW+2,UI_NORMAL|DIALOG_ROW
         dc.l tpl_none
-        dc.w 8,85,292,9,TPL_ROW+3,UI_NORMAL|DIALOG_ROW
+        dc.w 8,73,292,9,TPL_ROW+3,UI_NORMAL|DIALOG_ROW
         dc.l tpl_none
-        dc.w 8,94,292,9,TPL_ROW+4,UI_NORMAL|DIALOG_ROW
+        dc.w 8,82,292,9,TPL_ROW+4,UI_NORMAL|DIALOG_ROW
         dc.l tpl_none
-        dc.w 8,103,292,9,TPL_ROW+5,UI_NORMAL|DIALOG_ROW
+        dc.w 8,91,292,9,TPL_ROW+5,UI_NORMAL|DIALOG_ROW
         dc.l tpl_none
-        dc.w 8,112,292,9,TPL_ROW+6,UI_NORMAL|DIALOG_ROW
+        dc.w 8,100,292,9,TPL_ROW+6,UI_NORMAL|DIALOG_ROW
         dc.l tpl_none
-        dc.w 8,121,292,9,TPL_ROW+7,UI_NORMAL|DIALOG_ROW
+        dc.w 8,109,292,9,TPL_ROW+7,UI_NORMAL|DIALOG_ROW
         dc.l tpl_none
         dc.w 8,134,92,14,TPL_PREV,UI_NORMAL
         dc.l tpl_prev_label
@@ -313,10 +410,46 @@ tpl_phases_heading: dc.b "Phases of",0
 tpl_unknown: dc.b "?",0
 tpl_none: dc.b 0
 tpl_of: dc.b " of ",0
+tpl_sep: dc.b "  ",0
+tpl_phases_suffix: dc.b " phases",0
+tpl_one_phase: dc.b "  1 phase",0
+tpl_cells_suffix: dc.b " cells",0
 tpl_prev_label: dc.b "_Previous",0
 tpl_next_label: dc.b "_Next",0
 tpl_use_label: dc.b "_Use",0
 tpl_back_label: dc.b "Back",0
+        even
+tpl_family_names:
+        dc.w .jun0-tpl_family_names,.jun1-tpl_family_names
+        dc.w .ice-tpl_family_names,.des-tpl_family_names
+        dc.w .mor-tpl_family_names,.int-tpl_family_names
+.jun0: dc.b "Jungle A",0
+.jun1: dc.b "Jungle B",0
+.ice: dc.b "Ice",0
+.des: dc.b "Desert",0
+.mor: dc.b "Moor",0
+.int: dc.b "Interior",0
+; Terrain family (0..5) and map dimensions (width, height) for maps 1..72.
+tpl_map_info:
+        dc.b 0,19,15,0,46,36,0,46,34,2,40,34
+        dc.b 1,76,52,1,19,15,0,60,45,1,50,45
+        dc.b 2,100,15,2,80,50,2,60,40,3,40,32
+        dc.b 3,60,60,2,26,70,2,65,50,2,50,40
+        dc.b 0,49,30,0,35,30,0,74,80,0,40,56
+        dc.b 2,40,26,2,26,60,3,40,40,3,45,45
+        dc.b 3,26,45,3,19,30,3,40,45,0,70,60
+        dc.b 0,32,35,0,76,78,2,60,30,2,26,60
+        dc.b 2,60,45,2,40,60,2,40,45,2,40,30
+        dc.b 4,40,36,3,46,52,3,42,45,3,42,52
+        dc.b 4,68,25,4,45,35,4,65,70,5,70,30
+        dc.b 5,68,15,4,55,51,5,70,40,5,19,58
+        dc.b 5,46,25,5,103,15,5,59,45,5,60,42
+        dc.b 4,50,70,4,50,70,4,95,70,4,60,80
+        dc.b 5,21,15,3,50,65,3,19,34,3,120,15
+        dc.b 3,40,30,4,65,35,4,60,60,4,45,45
+        dc.b 4,65,41,4,40,30,5,40,45,5,40,27
+        dc.b 5,19,45,5,60,40,5,19,60,5,41,40
+        even
         
 ; Game disk prompt: under WHDLoad the disks are the files Disk.2 and Disk.3
 ; of the install. Retry and Cancel on the row of the Custom prompt.

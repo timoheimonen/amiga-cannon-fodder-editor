@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -28,7 +28,7 @@ base:
         dc.w 0,0
         dc.b 0,$59
 expmem:
-        dc.l DIALOG_EXPMEM_BYTES        ; ws_ExpMem, replaced by its address
+        dc.l SLAVE_EXPMEM_BYTES         ; ws_ExpMem, replaced by its address
         dc.w title-base
         dc.w copyright-base
         dc.w information-base
@@ -37,7 +37,7 @@ expmem:
         dc.w 0,0
 title: dc.b "Cannon Fodder",0
 copyright: dc.b "1993 Sensible Software / Virgin",0
-information: dc.b "In-Game Level Editor V1.2.5",10,"by Timo Heimonen",0
+information: dc.b "In-Game Level Editor V1.2.6",10,"by Timo Heimonen",0
         even
 resload: dc.l 0
 
@@ -221,6 +221,8 @@ whd_service_dispatch:
         beq fs_crc32
         cmpi.w #CLIPBOARD_OPERATION,d0
         beq clipboard_service
+        cmpi.w #UNDO_OPERATION,d0
+        beq undo_service
         cmpi.w #5,d0
         beq.s .transport
         cmpa.l #EDITOR_IO_BASE+64,a0
@@ -246,6 +248,8 @@ whd_service_dispatch:
         include "ui_service.s"
         include "dialog_service.s"
         include "help_service.s"
+        include "overview_service.s"
         include "hill_service.s"
         include "key_service.s"
         include "clipboard_service.s"
+        include "undo_service.s"

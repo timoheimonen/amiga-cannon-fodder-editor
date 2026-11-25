@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -22,7 +22,7 @@ TEST_PHASE_TITLE equ TEST_TITLE+64
         section .text,code
         xdef test_start,test_entry,test_end,test_owner,test_stage_pin
         xdef test_before_stage,test_before_publish,test_publish_play
-        xdef test_publish_editor,test_prepare_roster,test_success
+        xdef test_publish_editor,test_prepare_roster,test_success,test_precheck
 ; Fixed load-base anchor: X+PCREL(pc) reads the absolute address X
 ; PC-relatively from module code.
 module_pc_base:
@@ -57,6 +57,8 @@ test_entry:
         move.b #E7_TEST_RELOAD,E7_STAGE
         bra.s test_stage
 test_initialize:
+        cmpi.b #E7_TEST_PRECHECK,E7_STAGE
+        beq test_precheck
         lea E7_CONTEXT,a0
         cmpi.l #E7_TAG,(a0)
         beq.s .existing
@@ -121,6 +123,13 @@ test_before_publish:
 .save_tail:
         move.l (a0)+,(a1)+
         dbf d0,.save_tail
+        lea EDITOR_UNDO_BASE,a0
+        move.l AUR_BASE+AUR_UNDO_NEXT,d2
+        move.l AUR_BASE+AUR_SOURCE_ID,d3
+        move.w AUR_BASE+AUR_SELECTED,d4
+        moveq #UNDO_BACKUP,d1
+        moveq #UNDO_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
         bsr test_copy_payload
         bsr test_prepare_roster
         clr.l SESSION_CHECKPOINT_VALID
@@ -159,6 +168,13 @@ test_restore_editor:
         move.w EDITOR_METADATA_BASE+CFMD_MANIFEST_BYTES,d0
         bsr os_copy
         clr.l AUR_BASE+AUR_UNDO_NEXT
+        lea EDITOR_UNDO_BASE,a0
+        lea AUR_BASE+AUR_UNDO_NEXT,a1
+        move.l AUR_BASE+AUR_SOURCE_ID,d3
+        move.w AUR_BASE+AUR_SELECTED,d4
+        moveq #UNDO_RESTORE,d1
+        moveq #UNDO_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
         move.w #AUR_ASSETS_INCOMPLETE,AUR_BASE+AUR_ASSET_STATE
         clr.l STORAGE_READY
         clr.l SESSION_CHECKPOINT_VALID
@@ -175,11 +191,53 @@ test_restore_editor:
 test_publish_editor:
         move.w (sp)+,sr
         moveq #1,d0
-        bra.s test_editor_reply
+        bra test_editor_reply
 
 test_gameplay_error:
         moveq #TEST_ERROR_GAMEPLAY,d0
-        bra.s test_failed
+        bra test_failed
+
+; Pre-save check of a dirty or unsaved draft in RAM: validate the current
+; phase's gameplay, title projection and roster capacity before Save runs.
+test_precheck:
+        lea EDITOR_METADATA_BASE,a0
+        lea OPEN_STAGE_METADATA,a1
+        moveq #63,d0
+.copy_meta:
+        move.l (a0)+,(a1)+
+        dbf d0,.copy_meta
+        lea map_file_buffer,a0
+        moveq #0,d1
+        move.w OPEN_STAGE_METADATA+CFMD_MAP_BYTES,d1
+        bsr read_crc32
+        move.l d0,OPEN_STAGE_METADATA+CFMD_MAP_CRC
+        lea EDITOR_SPT_BASE,a0
+        moveq #0,d1
+        move.w OPEN_STAGE_METADATA+CFMD_SPT_BYTES,d1
+        bsr read_crc32
+        move.l d0,OPEN_STAGE_METADATA+CFMD_SPT_CRC
+        lea map_file_buffer,a0
+        lea EDITOR_SPT_BASE,a1
+        lea OPEN_STAGE_METADATA,a2
+        lea OPEN_STAGE_RESULT,a3
+        lea EDITOR_SERIAL_WORK_BASE+32,a4
+        moveq #0,d0
+        move.w CFMD_MAP_BYTES(a2),d0
+        moveq #0,d1
+        move.w CFMD_SPT_BYTES(a2),d1
+        bsr cf_payload_validate
+        tst.w d0
+        bne test_gameplay_error
+        tst.l OPEN_STAGE_RESULT+CFVR_ERRORS
+        bne test_gameplay_error
+        bsr test_project_titles
+        bne test_failed
+        bsr test_initial_preflight
+        bne test_failed
+        moveq #2,d0
+        clr.b E7_STAGE
+        bra test_editor_reply
+
 test_media_error:
         moveq #STORAGE_READ_MEDIA,d0
 test_failed:
@@ -239,8 +297,6 @@ test_owner:
         bne .return
         cmpi.w #AUR_VERSION,AUR_BASE+4
         bne .return
-        cmpi.w #AUR_HAS_SOURCE|AUR_PAGE_PENDING,AUR_BASE+AUR_FLAGS
-        bne .return
         tst.w AUR_BASE+AUR_DRIVE
         bne .return
         tst.l AUR_BASE+AUR_TRANSPORT_STATUS
@@ -262,6 +318,29 @@ test_owner:
         move.b AUR_BASE+AUR_SELECTED,d2
         cmp.w d1,d2
         bhs .return
+        cmpi.w #2,session_custom_mode
+        bne .check_source
+        cmpi.b #E7_TEST_PRECHECK,E7_STAGE
+        bne.s .check_source
+        ; Pre-save check admits dirty or unsaved drafts with PAGE_PENDING only.
+        move.w AUR_BASE+AUR_FLAGS,d1
+        andi.w #AUR_SAVE_PENDING|AUR_PAGE_PENDING,d1
+        cmpi.w #AUR_PAGE_PENDING,d1
+        bne .return
+        cmpi.w #SESSION_EVENT_HILL,session_event
+        bne .return
+        cmpi.w #REQ_PURPOSE_EDITOR,EDITOR_SESSION_BASE+REQ_PURPOSE
+        bne .return
+        tst.l EDITOR_SESSION_BASE+REQ_RESULT_ID
+        bne .return
+        tst.w EDITOR_SESSION_BASE+REQ_LAST_RESULT
+        bne .return
+        tst.w native_fifth_plane
+        bne .return
+        bra .ok
+.check_source:
+        cmpi.w #AUR_HAS_SOURCE|AUR_PAGE_PENDING,AUR_BASE+AUR_FLAGS
+        bne .return
         lea AUR_BASE+AUR_PHASE_MAP,a0
         moveq #0,d2
 .mapping:
@@ -290,21 +369,6 @@ test_owner:
         tst.l EDITOR_SESSION_BASE+REQ_RESULT_ID
         bne .return
         tst.w EDITOR_SESSION_BASE+REQ_LAST_RESULT
-        bne .return
-        cmpi.l #SAVE_MAGIC,SAVE_CONTEXT
-        bne .return
-        cmpi.l #1,SAVE_CONTEXT+SAVE_READY
-        bne .return
-        tst.w SAVE_CONTEXT+SAVE_STATUS
-        bne .return
-        move.l SAVE_CONTEXT+SAVE_TARGET_ID,d1
-        cmp.l AUR_BASE+AUR_SOURCE_ID,d1
-        bne .return
-        move.l SAVE_CONTEXT+SAVE_RESULT_BYTES,d1
-        cmp.l AUR_BASE+AUR_SOURCE_BYTES,d1
-        bne .return
-        move.l SAVE_CONTEXT+SAVE_RESULT_BODY_CRC,d1
-        cmp.l AUR_BASE+AUR_SOURCE_CRC,d1
         bne .return
         tst.l E7_CONTEXT
         beq.s .new_record

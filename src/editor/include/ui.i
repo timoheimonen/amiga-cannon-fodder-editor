@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -49,6 +49,7 @@ UI_DISABLED         equ 3
 UI_DEFAULT          equ 4
 UI_DEFAULT_HOVER    equ 5
 UI_DEFAULT_ACTIVE   equ 6   ; selected or held down, and framed
+UI_ROW_ERROR        equ $0100 ; flat list row highlighted in the error role
 UI_KEY_MARK         equ '_'
 
 ; Colour roles.
@@ -110,6 +111,16 @@ BLOCK_TERRAIN       equ 8
 BLOCK_CELLS         equ 16
 BLOCK_MAX_CELLS     equ 256
 CLIPBOARD_BYTES     equ BLOCK_CELLS+2*BLOCK_MAX_CELLS
+; Undo backup across Test and 256-record Redo ring in Slave ExpMem
+; (backend operation 14). All registers except D0.l are preserved.
+UNDO_OPERATION      equ 14
+UNDO_BACKUP         equ 0   ; A0=undo4096, D2.l=next|count, D3.l=source_id, D4.w=selected
+UNDO_RESTORE        equ 1   ; A0=undo4096, A1=&next|count, D3.l=source_id, D4.w=selected -> 1/0
+UNDO_REDO_CLEAR     equ 2   ; clears redo ring and any test backup -> 0
+UNDO_REDO_PUSH      equ 3   ; A0=16-byte record -> 0
+UNDO_REDO_PEEK      equ 4   ; -> 0 empty, 1 terrain, 2..4 object
+UNDO_REDO_POP_ONE   equ 5   ; A0=16-byte out -> 1 popped / 0 empty
+UNDO_REDO_POP_GROUP equ 6   ; A0=64-byte out (object group oldest-first) -> bytes/0/-1
 HILL_DISK           equ $16
 HILL_EDITOR_X       equ 58
 HILL_CUSTOM_X       equ 188

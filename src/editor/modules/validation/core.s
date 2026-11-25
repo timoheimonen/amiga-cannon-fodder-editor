@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -15,20 +15,20 @@ vald_scan:
         cmpa.l #map_file_buffer,a0
         beq.s .map_owner
         cmpa.l #EDITOR_READBACK_BASE,a0
-        bne.s .bad
+        bne .bad
 .map_owner:
         cmpa.l #EDITOR_SPT_BASE,a1
         beq.s .spt_owner
         cmpa.l #VD_STAGE_SPT,a1
-        bne.s .bad
+        bne .bad
 .spt_owner:
         cmpa.l #EDITOR_METADATA_BASE,a2
         beq.s .metadata_owner
         cmpa.l #VD_METADATA,a2
-        bne.s .bad
+        bne .bad
 .metadata_owner:
-        tst.w VD_RESERVED
-        bne.s .bad
+        cmpi.w #2,VD_FILTER
+        bhi.s .bad
         move.w VD_CAPACITY,d2
         beq.s .bad
         cmpi.w #VD_MAX_ROWS,d2

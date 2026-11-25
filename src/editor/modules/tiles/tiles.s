@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -67,6 +67,7 @@ tiles_entry:
 .top:
         move.w d0,page_top
         move.w #AUR_PAGE_NONE,page_choice
+        move.w #AUR_PAGE_NONE,TILE_DRAWN_HOVER
         bsr tile_bar_prepare
         bne tile_preflight_error
 tile_before_view:
@@ -91,9 +92,14 @@ tile_after_view:
         beq.s .drain
         cmpi.w #$4D,d0
         beq.s .drain
+        cmpi.w #$4E,d0
+        beq.s .drain
+        cmpi.w #$4F,d0
+        beq.s .drain
         clr.w native_last_key
         clr.w native_left_pressed
         clr.w native_right_pressed
+        move.l native_mouse_x,TILE_MOUSE_POS
 tile_idle:
         jsr wait_frame
         jsr editor_pointer_update

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -160,7 +160,7 @@ pal_render:
 
 ; The visible catalog rows; the highlighted one is selected.
 pal_rows:
-        movem.l d0-d7/a0-a1,-(sp)
+        movem.l d0/d6-d7,-(sp)
         moveq #0,d7
 .row:
         move.w page_top,d0
@@ -172,6 +172,25 @@ pal_rows:
         bne.s .state
         moveq #UI_ACTIVE,d6
 .state:
+        bsr.s pal_draw_row
+        addq.w #1,d7
+        cmpi.w #PAL_VISIBLE_ROWS,d7
+        blo.s .row
+.done:
+        movem.l (sp)+,d0/d6-d7
+        rts
+
+; Draw one visible catalog row D0.w (category index) in state D6.w.
+; Preserves all registers.
+pal_draw_row:
+        movem.l d0/d7/a0-a1,-(sp)
+        cmp.w pal_count,d0
+        bhs.s .done
+        move.w d0,d7
+        sub.w page_top,d7
+        bmi.s .done
+        cmpi.w #PAL_VISIBLE_ROWS,d7
+        bhs.s .done
         add.w pal_first,d0
         lsl.w #2,d0
         lea pal_catalog(pc),a1
@@ -180,10 +199,9 @@ pal_rows:
         lea PAL_COMMAND,a0
         move.w #UI_ROW_AT,(a0)+
         move.w #2,(a0)+
-        move.w d7,d0
-        mulu #PAL_ROW_PITCH,d0
-        addi.w #PAL_LIST_Y,d0
-        move.w d0,(a0)+
+        mulu #PAL_ROW_PITCH,d7
+        addi.w #PAL_LIST_Y,d7
+        move.w d7,(a0)+
         move.w #PAL_LIST_WIDTH-2,(a0)+
         move.w #PAL_ROW_PITCH-1,(a0)+
         move.w d6,(a0)+
@@ -192,11 +210,26 @@ pal_rows:
         lea PAL_COMMAND,a0
         lea pal_target_page(pc),a1
         bsr pal_ui
-        addq.w #1,d7
-        cmpi.w #PAL_VISIBLE_ROWS,d7
-        blo.s .row
 .done:
-        movem.l (sp)+,d0-d7/a0-a1
+        movem.l (sp)+,d0/d7/a0-a1
+        rts
+
+; Partial redraw when page_hover moves within the same visible page:
+; redraw only the old row (D7.w), the new row, the preview and the bar band.
+pal_hover_redraw:
+        movem.l d0/d6/a4,-(sp)
+        lea preview_state,a4
+        bsr preview_restore
+        move.w d7,d0
+        moveq #UI_NORMAL,d6
+        bsr pal_draw_row
+        move.w page_hover,d0
+        moveq #UI_ACTIVE,d6
+        bsr pal_draw_row
+        bsr pal_preview
+        bsr publish_ring
+        bsr pal_bar_refresh
+        movem.l (sp)+,d0/d6/a4
         rts
 
 ; D0.w = the index of the button under the pointer in the table at A0 of
@@ -376,18 +409,19 @@ pal_bar_refresh:
         bsr pal_decimal
         lea pal_bar_list(pc),a0
         lea pal_target_ui(pc),a1
-        bsr.s pal_ui
+        bsr pal_ui
 .lower:
         move.w pal_category,d0
         lsl.w #8,d0
         or.w page_hover,d0
         cmp.w PAL_DRAWN_ROW,d0
-        beq.s .done
+        beq .done
         move.w d0,PAL_DRAWN_ROW
         move.w page_hover,d0
         add.w pal_first,d0
         lsl.w #2,d0
         lea pal_catalog(pc),a1
+        move.w 0(a1,d0.w),d1
         move.w 2(a1,d0.w),d0
         adda.w d0,a1
         lea PAL_TEXT,a0
@@ -398,6 +432,29 @@ pal_bar_refresh:
         move.b d0,(a0)+
         bra.s .copy
 .copied:
+        lsl.w #2,d1
+        lea pal_recipes(pc),a1
+        move.b 0(a1,d1.w),d1
+        lea pal_part_open(pc),a1
+        bsr pal_append
+        moveq #3,d0
+        and.w d1,d0
+        addq.w #1,d0
+        move.w d0,d2
+        addi.b #'0',d0
+        move.b d0,(a0)+
+        lea pal_part_one(pc),a1
+        cmpi.w #1,d2
+        beq.s .part_word
+        lea pal_part_many(pc),a1
+.part_word:
+        bsr pal_append
+        tst.b d1
+        bpl.s .part_close
+        lea pal_part_unit(pc),a1
+        bsr pal_append
+.part_close:
+        move.b #')',(a0)+
         clr.b (a0)
         lea pal_band_list(pc),a0
         lea pal_target_band(pc),a1
@@ -548,12 +605,12 @@ pal_input:
         bsr pal_bar_hit
         tst.w d0
         bmi.s .list
-        moveq #-1,d1
+        moveq #-3,d1
         tst.w d0
-        beq .scroll
-        moveq #1,d1
+        beq .apply_direction
+        moveq #3,d1
         cmpi.w #1,d0
-        beq .scroll
+        beq .apply_direction
         cmpi.w #2,d0
         beq.s .choose
         bra .cancel
@@ -577,6 +634,16 @@ pal_input:
         bsr pal_set_category
         bra .render
 .held:
+        tst.w native_left_down
+        beq.s .held_keys
+        bsr pal_bar_hit
+        moveq #-3,d1
+        tst.w d0
+        beq.s .repeat
+        moveq #3,d1
+        cmpi.w #1,d0
+        beq.s .repeat
+.held_keys:
         moveq #-1,d1
         cmpi.w #$4c,native_raw_key
         beq.s .repeat
@@ -600,7 +667,7 @@ pal_input:
 .bottom:
         tst.w page_armed
         beq.s .repeat
-        moveq #1,d1
+        moveq #3,d1
 .repeat:
         tst.w d1
         beq .no_direction
@@ -612,18 +679,46 @@ pal_input:
         move.w d1,page_direction
         move.w #7,page_repeat
         cmpi.w #-2,d1
-        beq.s .previous_category
+        beq .previous_category
         cmpi.w #2,d1
-        beq.s .next_category
+        beq .next_category
+        cmpi.w #-3,d1
+        bne.s .check_scroll_down
+        moveq #-1,d1
+        bra.s .scroll
+.check_scroll_down:
+        cmpi.w #3,d1
+        bne.s .step_hover
+        moveq #1,d1
+        bra.s .scroll
+.step_hover:
+        move.w page_hover,d0
+        add.w d1,d0
+        bmi .hover
+        cmp.w pal_count,d0
+        bhs .hover
+        move.w d0,page_hover
+        cmp.w page_top,d0
+        bhs.s .check_bottom
+        move.w d0,page_top
+        bra .render
+.check_bottom:
+        move.w page_top,d2
+        addi.w #PAL_VISIBLE_ROWS-1,d2
+        cmp.w d2,d0
+        bls .hover
+        subi.w #PAL_VISIBLE_ROWS-1,d0
+        move.w d0,page_top
+        bra .render
 .scroll:
         move.w page_top,d0
         add.w d1,d0
-        bmi.s .hover
+        bmi .hover
         move.w pal_count,d2
         subi.w #PAL_VISIBLE_ROWS,d2
-        bmi.s .hover
+        bmi .hover
         cmp.w d2,d0
-        bhi.s .hover
+        bhi .hover
         move.w d0,page_top
         bsr pal_hover_update
         ; Footer/key scrolling keeps a visible highlighted row even when
@@ -635,9 +730,9 @@ pal_input:
 .check_last_highlight:
         addi.w #PAL_VISIBLE_ROWS-1,d0
         cmp.w page_hover,d0
-        bhs.s .render
+        bhs .render
         move.w d0,page_hover
-        bra.s .render
+        bra .render
 .previous_category:
         move.w pal_category,d0
         subq.w #1,d0
@@ -655,6 +750,8 @@ pal_input:
 .hover:
         cmp.w page_hover,d7
         beq.s .idle
+        bsr pal_hover_redraw
+        bra.s .idle
 .render:
         bsr pal_render
 .idle:
@@ -687,7 +784,12 @@ pal_row_at:
         rts
 
 ; Leaving the list preserves the last highlighted item and its preview.
+; Update only when the pointer moved, so arrow selection stays put.
 pal_hover_update:
+        move.l native_mouse_x,d0
+        cmp.l PAL_MOUSE_POS,d0
+        beq.s .done
+        move.l d0,PAL_MOUSE_POS
         bsr.s pal_row_at
         bmi.s .done
         move.w d0,page_hover
@@ -750,4 +852,8 @@ pal_choose_label: dc.b "Choose",0
 pal_cancel_label: dc.b "Cancel",0
 pal_rows_text: dc.b "Rows ",0
 pal_of_text: dc.b " of ",0
+pal_part_open: dc.b "  (",0
+pal_part_one: dc.b " part",0
+pal_part_many: dc.b " parts",0
+pal_part_unit: dc.b ", unit",0
         even

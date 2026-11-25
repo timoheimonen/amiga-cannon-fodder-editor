@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -92,7 +92,7 @@ AUR_VALIDATION_END   equ EDITOR_SERIAL_WORK_BASE+160
         fail "Authoring origin words exceed BRW allocation"
         endif
 
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -133,6 +133,7 @@ E7_TEST_READY equ 3
 E7_TEST_PLAY equ 4
 E7_TEST_RELOAD equ 5
 E7_TEST_RETURNED equ 6
+E7_TEST_PRECHECK equ 7
 TEST_ERROR_STATE equ -120
 TEST_ERROR_SOURCE equ -121
 TEST_ERROR_GAMEPLAY equ -122

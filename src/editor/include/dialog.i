@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -35,6 +35,11 @@ DIALOG_SET          equ 5
 ; DIALOG_POLL then returns 0 to close and DIALOG_HELP_PAGE+n to show page n.
 DIALOG_HELP         equ 6
 DIALOG_HELP_PAGE    equ $100
+; D2.w=view_origin_x, D3.w=view_origin_y. Opens the terrain-class Overview
+; minimap dialog; DIALOG_OVERVIEW_POLL returns -1 while open, 0 on close, or
+; $40000000 | (origin_x << 16) | origin_y when the user clicks the minimap.
+DIALOG_OVERVIEW     equ 7
+DIALOG_OVERVIEW_POLL equ 8
 
 ; Descriptor, word aligned; addresses are absolute.
 DIALOG_TOP          equ 0   ; first screen row of the band, at least 8
@@ -61,6 +66,9 @@ DIALOG_DOUBLE_CLICK equ 25
 ; the selected row has state UI_ACTIVE.
 DIALOG_ROW_BIT      equ 9
 DIALOG_ROW          equ 1<<DIALOG_ROW_BIT
+; DIALOG_ERROR highlights a list row in the error colour role.
+DIALOG_ERROR_BIT    equ 10
+DIALOG_ERROR        equ 1<<DIALOG_ERROR_BIT
 DIALOG_BUTTON_X     equ 0
 DIALOG_BUTTON_Y     equ 2
 DIALOG_BUTTON_W     equ 4

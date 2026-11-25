@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -60,7 +60,14 @@ object_view_entry:
         bne object_return
         cmpi.w #2,AUR_BASE+AUR_TOOL
         beq.s .live
+        cmpi.w #EDTR_NOTICE_REDO,edtr_notice
+        beq.s .one_shot_redo
         bsr object_undo_edit
+        bra.s .one_shot_done
+.one_shot_redo:
+        clr.w edtr_notice
+        bsr object_redo_edit
+.one_shot_done:
         moveq #OBJECT_EDIT_REFUSED,d7
         cmpi.w #1,d0
         bne object_view_publish
@@ -73,6 +80,7 @@ object_view_entry:
         move.l #-1,OBJECT_LAST_RAW
         clr.l TERRAIN_OP
         clr.l TERRAIN_CURSOR_X
+        clr.w TERRAIN_BLOCK_NOTICE
         cmpi.w #EDTR_NOTICE_SAVED,edtr_notice
         bne.s .cursor_ready
         move.l #-1,TERRAIN_CURSOR_X

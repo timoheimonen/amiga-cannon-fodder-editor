@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -21,9 +21,17 @@ EDTR_SAVE_QUOTA          equ -48
 OBJECT_NO_ROOM           equ -49
 ; The Help key: a message whose dialog is the Slave's Help pages.
 EDTR_HELP                equ -50
+; Specific object placement limit refusals: parts (43), units (30), squad (8).
+OBJECT_NO_PARTS          equ -51
+OBJECT_NO_UNITS          equ -52
+OBJECT_NO_SQUAD          equ -53
 ; edtr_notice value after a verified Save: the bar shows SAVED in place of
 ; the cell readout (cursor $FFFF) until the pointer next moves over the map.
 EDTR_NOTICE_SAVED        equ $5356
+; edtr_notice value when V in Object view requests recalling the copied block.
+EDTR_NOTICE_RECALL       equ $5243
+; edtr_notice value when Y in Map view requests one-shot object Redo via OBJV.
+EDTR_NOTICE_REDO         equ $5244
 EDTR_DIALOG_MENU       equ 0
 EDTR_DIALOG_UNSAVED    equ 1
 EDTR_DIALOG_MESSAGE    equ 2
@@ -118,6 +126,11 @@ TERRAIN_SELECT_Y        equ EDITOR_UI_BASE+30
 TERRAIN_SELECT          equ EDITOR_UI_BASE+32
 ; Nonzero when the information line says why a copy or a recall did nothing.
 TERRAIN_BLOCK_NOTICE    equ EDITOR_UI_BASE+34
+; Countdown for the Saved. notice: 2 when Save returned with the pointer on
+; the map (first cell adoption keeps Saved.), 1 when on the bar; 0 = cleared.
+TERRAIN_SAVED_NOTICE    equ EDITOR_UI_BASE+36
+; Nonzero while the view-only terrain-class (passability) overlay (P) is active.
+TERRAIN_OVERLAY         equ EDITOR_UI_BASE+38
 TERRAIN_UI_END          equ EDITOR_UI_BASE+80
 
 ; The terrain stamp, in the resident's spare bytes: after a complete asset

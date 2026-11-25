@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -55,11 +55,13 @@ menu_title_step:
         moveq #PICKER_BACKSPACE,d0
         cmpi.w #$C1,d1
         beq.s .typed
+        moveq #PICKER_DELETE,d0
         cmpi.w #$C6,d1
         beq.s .typed
-        moveq #PICKER_KEEP,d0
+        moveq #PICKER_RIGHT,d0
         cmpi.w #$CE,d1
         beq.s .typed
+        moveq #PICKER_LEFT,d0
         cmpi.w #$CF,d1
         beq.s .typed
         ; Return, Esc and other untranslated keys belong to the dialog.
@@ -93,28 +95,59 @@ menu_title_event:
         move.w d0,EXIT_CHOICE
         bra edtr_modal_finish
 
-; The edited text with a cursor, then the width or the last refusal.
+; The edited text with an insertion cursor, then the width or the last refusal.
 menu_title_draw:
         movem.l d0-d5/a0-a2,-(sp)
-        ; A long title shows its end, where the cursor is.
-        lea picker_edit,a1
-        move.w picker_length,d0
-        subi.w #MENU_TITLE_CELLS-1,d0
-        ble.s .whole
-        adda.w d0,a1
-.whole:
-        lea EXIT_TEXT,a0
-        bsr dialog_copy
-        ; A selected title is shown highlighted, without the cursor.
-        lea menu_title_selected(pc),a2
+        ; Window the text around the cursor (or the end while selected).
+        moveq #0,d2
         tst.w picker_selected
-        bne.s .field
-        move.b #'_',(a0)+
-        lea menu_title_field(pc),a2
-.field:
+        beq.s .cursor_window
+        move.w picker_length,d2
+        subi.w #MENU_TITLE_CELLS,d2
+        bgt.s .copy_window
+        moveq #0,d2
+        bra.s .copy_window
+.cursor_window:
+        move.w picker_cursor,d2
+        subi.w #MENU_TITLE_CELLS-1,d2
+        bgt.s .copy_window
+        moveq #0,d2
+.copy_window:
+        lea picker_edit,a1
+        adda.w d2,a1
+        lea EXIT_TEXT,a0
+        moveq #MENU_TITLE_CELLS-1,d0
+.copy_char:
+        move.b (a1)+,d1
+        beq.s .copied
+        move.b d1,(a0)+
+        dbf d0,.copy_char
+.copied:
         clr.b (a0)
-        movea.l a2,a0
+        ; A selected title is shown highlighted, without the cursor bar.
+        lea menu_title_selected(pc),a0
+        tst.w picker_selected
+        bne.s .draw_box
+        lea menu_title_field(pc),a0
+.draw_box:
         bsr dialog_draw
+        tst.w picker_selected
+        bne.s .status_check
+        ; Vertical 1-pixel accent cursor at the exact insertion column.
+        move.w picker_cursor,d0
+        sub.w d2,d0
+        mulu #UI_CELL_WIDTH,d0
+        addi.w #19,d0
+        lea EXIT_LIST,a0
+        move.w #UI_RECT,(a0)+
+        move.w d0,(a0)+
+        move.w #MENU_TITLE_FIELD_Y+2,(a0)+
+        move.l #(1<<16)|10,(a0)+
+        move.w #UI_ACCENT,(a0)+
+        clr.w (a0)
+        lea EXIT_LIST,a0
+        bsr dialog_draw
+.status_check:
         move.w picker_error,d0
         moveq #UI_ERROR,d4
         lea menu_title_errors(pc),a2

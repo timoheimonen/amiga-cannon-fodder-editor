@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -14,7 +14,9 @@ picker_length     equ PICKER_BASE+14
 picker_width      equ PICKER_BASE+16
 ; Nonzero while the whole begun text is selected: typing replaces it.
 picker_selected   equ PICKER_BASE+18
+; Insertion cursor position 0..picker_length.
 picker_index      equ PICKER_BASE+20
+picker_cursor     equ PICKER_BASE+20
 picker_error      equ PICKER_BASE+22
 picker_number     equ PICKER_BASE+24
 picker_edit       equ PICKER_BASE+32
@@ -26,6 +28,9 @@ PICKER_CLEAR      equ -2
 PICKER_ACCEPT     equ -3
 PICKER_CANCEL     equ -4
 PICKER_KEEP       equ -5
+PICKER_LEFT       equ -6
+PICKER_RIGHT      equ -7
+PICKER_DELETE     equ -8
 
         xdef text_picker_begin,text_picker_event,text_picker_end
 
@@ -47,14 +52,14 @@ text_picker_begin:
         cmpi.w #TITLE_HILL_WIDTH,d1
         bhi .invalid
         cmpi.w #320,d2
-        bhi.s .invalid
+        bhi .invalid
         move.l a0,d3
         addi.l #64,d3
-        bcs.s .invalid
+        bcs .invalid
         cmpi.l #PICKER_BASE,d3
         bls.s .disjoint
         cmpa.l #PICKER_BASE+PICKER_BYTES,a0
-        blo.s .invalid
+        blo .invalid
 .disjoint:
         move.l a0,picker_source
         move.w d0,picker_limit
@@ -76,6 +81,7 @@ text_picker_begin:
         clr.b (a1)
         move.w d3,picker_length
         move.w d3,picker_selected
+        move.w d3,picker_cursor
         bsr picker_measure
         tst.w d0
         bne.s .return
@@ -106,6 +112,12 @@ text_picker_event:
         beq .accept
         cmpi.w #PICKER_KEEP,d0
         beq .keep
+        cmpi.w #PICKER_LEFT,d0
+        beq .left
+        cmpi.w #PICKER_RIGHT,d0
+        beq .right
+        cmpi.w #PICKER_DELETE,d0
+        beq .delete
         cmpi.w #PICKER_CLEAR,d0
         beq .clear
         cmpi.w #PICKER_BACKSPACE,d0
@@ -115,20 +127,43 @@ text_picker_event:
         cmpi.w #'~',d0
         bhi .invalid
         tst.w picker_selected
-        bne.s .replace
+        bne .replace
         move.w picker_length,d4
         cmp.w picker_limit,d4
         bhs .length
         move.w picker_width,d5
+        move.w picker_cursor,d6
+        cmp.w d4,d6
+        bls.s .ins_ok
+        move.w d4,d6
+        move.w d6,picker_cursor
+.ins_ok:
         lea picker_edit,a0
-        move.b d0,(a0,d4.w)
-        clr.b 1(a0,d4.w)
+        move.w d4,d3
+.ins_shift:
+        move.b (a0,d3.w),1(a0,d3.w)
+        cmp.w d6,d3
+        beq.s .ins_store
+        subq.w #1,d3
+        bra.s .ins_shift
+.ins_store:
+        move.b d0,(a0,d6.w)
         addq.w #1,picker_length
         bsr picker_measure
         tst.w d0
-        beq .return
+        bne.s .ins_revert
+        addq.w #1,picker_cursor
+        bra .return
+.ins_revert:
         lea picker_edit,a0
-        clr.b (a0,d4.w)
+        move.w d6,d3
+.ins_un:
+        move.b 1(a0,d3.w),(a0,d3.w)
+        cmp.w d4,d3
+        beq.s .ins_restored
+        addq.w #1,d3
+        bra.s .ins_un
+.ins_restored:
         move.w d4,picker_length
         move.w d5,picker_width
         bra .return
@@ -144,29 +179,66 @@ text_picker_event:
         tst.w d0
         bne.s .restore
         clr.w picker_selected
+        move.w #1,picker_cursor
         bra .return
 .restore:
         move.w d6,picker_edit
         move.w d4,picker_length
         move.w d5,picker_width
         bra .return
+.left:
+        tst.w picker_selected
+        beq.s .left_step
+        clr.w picker_selected
+        clr.w picker_cursor
+        bra .measure
+.left_step:
+        tst.w picker_cursor
+        beq .measure
+        subq.w #1,picker_cursor
+        bra .measure
+.right:
+        tst.w picker_selected
+        bne.s .keep
+        move.w picker_cursor,d0
+        cmp.w picker_length,d0
+        bhs .measure
+        addq.w #1,picker_cursor
+        bra .measure
 .keep:
         clr.w picker_selected
-        bra.s .measure
+        move.w picker_length,picker_cursor
+        bra .measure
 .clear:
         clr.w picker_selected
         clr.w picker_length
+        clr.w picker_cursor
         clr.b picker_edit
-        bra.s .measure
+        bra .measure
+.delete:
+        tst.w picker_selected
+        bne.s .clear
+        move.w picker_cursor,d3
+        move.w picker_length,d4
+        cmp.w d4,d3
+        bhs .measure
+        bra.s .erase_at
 .backspace:
         tst.w picker_selected
         bne.s .clear
-        move.w picker_length,d0
-        beq.s .measure
-        subq.w #1,d0
-        move.w d0,picker_length
+        move.w picker_cursor,d3
+        beq .measure
+        subq.w #1,d3
+        move.w d3,picker_cursor
+        move.w picker_length,d4
+.erase_at:
         lea picker_edit,a0
-        clr.b (a0,d0.w)
+.del_shift:
+        move.b 1(a0,d3.w),(a0,d3.w)
+        addq.w #1,d3
+        cmp.w d4,d3
+        blo.s .del_shift
+        subq.w #1,picker_length
 .measure:
         bsr.s picker_measure
         bra.s .return

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -37,6 +37,12 @@ bar_compose:
         bsr bar_set_state
 .selected:
         lea BAR_INFO_TEXT,a0
+        tst.w TERRAIN_BLOCK_NOTICE
+        beq.s .saved_check
+        lea object_move_refused_text(pc),a1
+        bsr bar_append
+        bra .done
+.saved_check:
         cmpi.w #-1,TERRAIN_CURSOR_X
         bne.s .name
         lea bar_saved_text(pc),a1
@@ -85,10 +91,65 @@ bar_compose:
         andi.w #15,d0
         move.b 0(a1,d0.w),(a0)+
         move.b #')',(a0)+
+        tst.w AUR_BASE+AUR_OBJECT_INDEX
+        bmi.s .append_phase
+        bsr.s object_ordinal
+        tst.w d0
+        beq.s .append_phase
+        move.w d1,-(sp)
+        move.b #' ',(a0)+
+        bsr bar_number
+        move.b #'/',(a0)+
+        move.w (sp)+,d0
+        bsr bar_number
+.append_phase:
         bsr bar_append_phase
 .done:
         clr.b (a0)
         movem.l (sp)+,d0-d2/a0-a1
+        rts
+
+; 1-based ordinal D0.w of AUR_OBJECT_INDEX among the D1.w selectable roots
+; in EDITOR_SPT_BASE (D0=0 if not found). Preserves A0/A1/D2-D7.
+object_ordinal:
+        movem.l d2-d6/a2-a3,-(sp)
+        moveq #0,d6
+        move.w EDITOR_METADATA_BASE+CFMD_SPT_BYTES,d6
+        divu #10,d6
+        move.w AUR_BASE+AUR_OBJECT_INDEX,d5
+        moveq #0,d0
+        moveq #0,d1
+        moveq #0,d2
+        lea EDITOR_SPT_BASE,a2
+.scan:
+        cmp.w d6,d2
+        bhs.s .end
+        move.w 8(a2),d3
+        move.w d3,d4
+        add.w d4,d4
+        lea op_part_index(pc),a3
+        tst.w 0(a3,d4.w)
+        beq.s .next
+        cmpi.w #$7FEF,4(a2)
+        bhi.s .next
+        tst.w 6(a2)
+        bmi.s .next
+        addq.w #1,d1
+        cmp.w d5,d2
+        bne.s .next
+        move.w d1,d0
+.next:
+        lsl.w #2,d3
+        lea ot_shared_recipes(pc),a3
+        move.b 0(a3,d3.w),d3
+        andi.w #3,d3
+        addq.w #1,d3
+        add.w d3,d2
+        mulu #10,d3
+        adda.w d3,a2
+        bra.s .scan
+.end:
+        movem.l (sp)+,d2-d6/a2-a3
         rts
 
 ; What the phase's objects use of its three limits. D0.w = parts (of 43),
@@ -137,6 +198,7 @@ object_parts_text: dc.b "Parts ",0
 object_units_text: dc.b "/43  Units ",0
 object_squad_text: dc.b "/30  Squad ",0
 object_squad_limit: dc.b "/8",0
+object_move_refused_text: dc.b "Move refused: part would leave the map.",0
 object_id_text: dc.b " (ID ",0
 object_hex_digits: dc.b "0123456789ABCDEF"
         even

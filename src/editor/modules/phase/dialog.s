@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -18,7 +18,7 @@ PHD_OBJECTIVE_BUTTON equ 2
 PHD_STEP_BUTTON     equ 10
 PHD_TOGGLE_BUTTON   equ 18
 PHD_TITLE_CHARS     equ 32
-PHD_RULE_Y          equ 119
+PHD_RULE_Y          equ 132
 PHD_REFUSED         equ EXIT_HELD
 
 ; Requires BEGIN. D0.l=0 open, otherwise refused.
@@ -115,10 +115,10 @@ phd_step_fields: dc.b 2,6,4,5
 phd_refresh:
         movem.l d0-d7/a0-a1,-(sp)
         lea PHM_DRAFT+CFMD_TITLE,a1
-        moveq #26,d2
+        moveq #25,d2
         bsr phd_title
         lea PHM_DRAFT+CFMD_PHASE_TITLE,a1
-        moveq #41,d2
+        moveq #58,d2
         bsr phd_title
         moveq #PHD_OBJECTIVE_BUTTON,d2
         moveq #0,d6
@@ -191,7 +191,7 @@ phd_refresh:
         moveq #UI_DIM,d4
 .line:
         moveq #8,d1
-        moveq #PHD_RULE_Y,d2
+        move.w #PHD_RULE_Y,d2
         move.w #292,d3
         moveq #UI_LEFT,d5
         bsr dialog_field
@@ -280,8 +280,9 @@ phd_title:
         bra dialog_field
 
 phd_toggle_labels:
-        dc.l phd_two_each,phd_none,phd_one_each,phd_none
-        dc.l phd_on,phd_off,phd_on,phd_off,phd_on,phd_off
+        dc.l phd_grn_on,phd_grn_off,phd_rkt_on,phd_rkt_off
+        dc.l phd_egrn_on,phd_egrn_off,phd_ovr_on,phd_ovr_off
+        dc.l phd_cnt_on,phd_cnt_off
 phd_rules:
         dc.w .one-phd_rules,.two-phd_rules,.three-phd_rules,.four-phd_rules
         dc.w .five-phd_rules,.six-phd_rules,.seven-phd_rules,.eight-phd_rules
@@ -296,114 +297,113 @@ phd_rules:
 phd_refused: dc.b "A phase needs at least one objective.",0
 phd_phase_label: dc.b "Phase ",0
 phd_of: dc.b " of ",0
-phd_two_each: dc.b "2 each",0
-phd_one_each: dc.b "1 each",0
-phd_none: dc.b "None",0
-phd_on: dc.b "On",0
-phd_off: dc.b "Off",0
+phd_grn_on: dc.b "_Grenades: 2 each",0
+phd_grn_off: dc.b "_Grenades: None",0
+phd_rkt_on: dc.b "_Rockets: 1 each",0
+phd_rkt_off: dc.b "_Rockets: None",0
+phd_egrn_on: dc.b "_Enemy grenades: On",0
+phd_egrn_off: dc.b "_Enemy grenades: Off",0
+phd_ovr_on: dc.b "_Overview map: On",0
+phd_ovr_off: dc.b "_Overview map: Off",0
+phd_cnt_on: dc.b "_Countdown: On",0
+phd_cnt_off: dc.b "_Countdown: Off",0
         even
 
 ; Buttons in index order: two Rename, eight objectives, four steppers (minus
-; then plus), five toggles, Done (default) and Cancel.
+; then plus), five toggles, Done (default) and Cancel. Mission-wide controls
+; sit above the recessed divider; phase-specific controls sit below it.
 dlg_phase_settings:
         dc.w 8,216,UI_SELECT
         dc.l phd_heading,phd_body
         dc.w 23,0,25
-        dc.w 252,23,48,13,PHD_TITLE,UI_NORMAL
-        dc.l phd_rename
-        dc.w 252,38,48,13,PHD_TITLE+1,UI_NORMAL
-        dc.l phd_rename
-        dc.w 8,65,144,12,PHD_OBJECTIVE,UI_NORMAL
+        dc.w 252,22,48,13,PHD_TITLE,UI_NORMAL
+        dc.l phd_rename_mission
+        dc.w 252,55,48,13,PHD_TITLE+1,UI_NORMAL
+        dc.l phd_rename_phase
+        dc.w 8,79,144,12,PHD_OBJECTIVE,UI_NORMAL
         dc.l phd_kill
-        dc.w 156,65,144,12,PHD_OBJECTIVE+1,UI_NORMAL
+        dc.w 156,79,144,12,PHD_OBJECTIVE+1,UI_NORMAL
         dc.l phd_buildings
-        dc.w 8,78,144,12,PHD_OBJECTIVE+2,UI_NORMAL
+        dc.w 8,92,144,12,PHD_OBJECTIVE+2,UI_NORMAL
         dc.l phd_hostages
-        dc.w 156,78,144,12,PHD_OBJECTIVE+3,UI_NORMAL
+        dc.w 156,92,144,12,PHD_OBJECTIVE+3,UI_NORMAL
         dc.l phd_civilians
-        dc.w 8,91,144,12,PHD_OBJECTIVE+4,UI_NORMAL
+        dc.w 8,105,144,12,PHD_OBJECTIVE+4,UI_NORMAL
         dc.l phd_leader
-        dc.w 156,91,144,12,PHD_OBJECTIVE+5,UI_NORMAL
+        dc.w 156,105,144,12,PHD_OBJECTIVE+5,UI_NORMAL
         dc.l phd_factory
-        dc.w 8,104,144,12,PHD_OBJECTIVE+6,UI_NORMAL
+        dc.w 8,118,144,12,PHD_OBJECTIVE+6,UI_NORMAL
         dc.l phd_computer
-        dc.w 156,104,144,12,PHD_OBJECTIVE+7,UI_NORMAL
+        dc.w 156,118,144,12,PHD_OBJECTIVE+7,UI_NORMAL
         dc.l phd_home
-        dc.w 96,132,14,13,PHD_STEP,UI_NORMAL|DIALOG_REPEAT
+        dc.w 96,37,14,13,PHD_STEP,UI_NORMAL|DIALOG_REPEAT
         dc.l phd_less
-        dc.w 140,132,14,13,PHD_STEP+1,UI_NORMAL|DIALOG_REPEAT
+        dc.w 140,37,14,13,PHD_STEP+1,UI_NORMAL|DIALOG_REPEAT
         dc.l phd_more
-        dc.w 240,132,14,13,PHD_STEP+2,UI_NORMAL|DIALOG_REPEAT
+        dc.w 96,157,14,13,PHD_STEP+2,UI_NORMAL|DIALOG_REPEAT
         dc.l phd_less
-        dc.w 284,132,14,13,PHD_STEP+3,UI_NORMAL|DIALOG_REPEAT
+        dc.w 140,157,14,13,PHD_STEP+3,UI_NORMAL|DIALOG_REPEAT
         dc.l phd_more
-        dc.w 96,147,14,13,PHD_STEP+4,UI_NORMAL|DIALOG_REPEAT
+        dc.w 96,142,14,13,PHD_STEP+4,UI_NORMAL|DIALOG_REPEAT
         dc.l phd_less
-        dc.w 140,147,14,13,PHD_STEP+5,UI_NORMAL|DIALOG_REPEAT
+        dc.w 140,142,14,13,PHD_STEP+5,UI_NORMAL|DIALOG_REPEAT
         dc.l phd_more
-        dc.w 240,147,14,13,PHD_STEP+6,UI_NORMAL|DIALOG_REPEAT
+        dc.w 240,142,14,13,PHD_STEP+6,UI_NORMAL|DIALOG_REPEAT
         dc.l phd_less
-        dc.w 284,147,14,13,PHD_STEP+7,UI_NORMAL|DIALOG_REPEAT
+        dc.w 284,142,14,13,PHD_STEP+7,UI_NORMAL|DIALOG_REPEAT
         dc.l phd_more
-        dc.w 96,162,58,13,PHD_TOGGLE,UI_NORMAL
-        dc.l phd_none
-        dc.w 240,162,58,13,PHD_TOGGLE+1,UI_NORMAL
-        dc.l phd_none
-        dc.w 96,177,58,13,PHD_TOGGLE+2,UI_NORMAL
-        dc.l phd_off
-        dc.w 240,177,58,13,PHD_TOGGLE+3,UI_NORMAL
-        dc.l phd_off
-        dc.w 96,192,58,13,PHD_TOGGLE+4,UI_NORMAL
-        dc.l phd_off
-        dc.w 16,206,92,14,PHD_DONE,UI_NORMAL
+        dc.w 8,172,144,13,PHD_TOGGLE,UI_NORMAL
+        dc.l phd_grn_off
+        dc.w 156,172,144,13,PHD_TOGGLE+1,UI_NORMAL
+        dc.l phd_rkt_off
+        dc.w 8,187,144,13,PHD_TOGGLE+2,UI_NORMAL
+        dc.l phd_egrn_off
+        dc.w 156,187,144,13,PHD_TOGGLE+3,UI_NORMAL
+        dc.l phd_ovr_off
+        dc.w 156,157,144,13,PHD_TOGGLE+4,UI_NORMAL
+        dc.l phd_cnt_off
+        dc.w 16,205,92,14,PHD_DONE,UI_NORMAL
         dc.l phd_done
-        dc.w 208,206,92,14,0,UI_NORMAL
+        dc.w 208,205,92,14,0,UI_NORMAL
         dc.l dlg_cancel_label
 phd_body:
         dc.w UI_TEXT_AT,128,12,172,UI_ACCENT,UI_RIGHT
         dc.l EXIT_TEXT
-        dc.w UI_TEXT,8,26,46,UI_DIM,UI_LEFT
+        dc.w UI_TEXT,8,25,46,UI_DIM,UI_LEFT
         dc.b "Mission",0
-        dc.w UI_TEXT,8,41,46,UI_DIM,UI_LEFT
-        dc.b "Phase",0
-        dc.w UI_TEXT,8,55,288,UI_DIM,UI_LEFT
-        dc.b "Objectives",0
-        even
-        dc.w UI_TEXT,8,135,86,UI_INK,UI_LEFT
+        dc.w UI_TEXT,8,40,86,UI_INK,UI_LEFT
         dc.b "Recruits",0
         even
-        dc.w UI_TEXT,160,135,78,UI_INK,UI_LEFT
-        dc.b "Recruit rank",0
+        dc.w UI_TEXT,160,40,140,UI_DIM,UI_LEFT
+        dc.b "Shared by all phases",0
         even
-        dc.w UI_TEXT,8,150,86,UI_INK,UI_LEFT
+        dc.w UI_RECT,8,52,292,1,UI_SHADOW
+        dc.w UI_RECT,8,53,292,1,UI_LIGHT
+        dc.w UI_TEXT,8,58,46,UI_DIM,UI_LEFT
+        dc.b "Phase",0
+        dc.w UI_TEXT,8,70,288,UI_DIM,UI_LEFT
+        dc.b "Objectives",0
+        even
+        dc.w UI_TEXT,8,145,86,UI_INK,UI_LEFT
         dc.b "Aggression",0
         even
-        dc.w UI_TEXT,160,150,78,UI_INK,UI_LEFT
+        dc.w UI_TEXT,160,145,78,UI_INK,UI_LEFT
         dc.b "up to",0
-        dc.w UI_TEXT,8,165,86,UI_INK,UI_LEFT
-        dc.b "Grenades",0
+        dc.w UI_TEXT,8,160,86,UI_INK,UI_LEFT
+        dc.b "Recruit rank",0
         even
-        dc.w UI_TEXT,160,165,78,UI_INK,UI_LEFT
-        dc.b "Rockets",0
-        dc.w UI_TEXT,8,180,86,UI_INK,UI_LEFT
-        dc.b "Enemy grenades",0
-        even
-        dc.w UI_TEXT,160,180,78,UI_INK,UI_LEFT
-        dc.b "Overview map",0
-        even
-        dc.w UI_TEXT,8,195,86,UI_INK,UI_LEFT
-        dc.b "Countdown",0
         dc.w UI_END
 phd_heading: dc.b "Mission and phase settings",0
-phd_rename: dc.b "Rename",0
-phd_kill: dc.b "Kill all enemy",0
-phd_buildings: dc.b "Destroy buildings",0
-phd_hostages: dc.b "Rescue hostages",0
-phd_civilians: dc.b "Protect civilians",0
-phd_leader: dc.b "Kidnap enemy leader",0
-phd_factory: dc.b "Destroy factory",0
-phd_computer: dc.b "Destroy computer",0
-phd_home: dc.b "Get civilian home",0
+phd_rename_mission: dc.b "Rena_me",0
+phd_rename_phase: dc.b "Re_name",0
+phd_kill: dc.b "_1 Kill all enemy",0
+phd_buildings: dc.b "_2 Destroy buildings",0
+phd_hostages: dc.b "_3 Rescue hostages",0
+phd_civilians: dc.b "_4 Protect civilians",0
+phd_leader: dc.b "_5 Kidnap enemy leader",0
+phd_factory: dc.b "_6 Destroy factory",0
+phd_computer: dc.b "_7 Destroy computer",0
+phd_home: dc.b "_8 Get civilian home",0
 phd_less: dc.b "-",0
 phd_more: dc.b "+",0
 phd_done: dc.b "_Done",0

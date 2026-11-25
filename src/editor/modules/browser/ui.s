@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -482,9 +482,9 @@ dlg_browser_editor:
         dc.l browser_none
         dc.w 8,138,256,12,BROWSER_UI_ROW+3,UI_NORMAL|DIALOG_ROW
         dc.l browser_none
-        dc.w 268,54,32,14,2,UI_NORMAL
+        dc.w 268,54,32,14,2,UI_NORMAL|DIALOG_REPEAT
         dc.l browser_up_label
-        dc.w 268,138,32,14,3,UI_NORMAL
+        dc.w 268,138,32,14,3,UI_NORMAL|DIALOG_REPEAT
         dc.l browser_down_label
         dc.w 16,190,94,14,4,UI_NORMAL
         dc.l browser_edit_action
@@ -508,9 +508,9 @@ dlg_browser:
         dc.l browser_none
         dc.w 8,138,256,12,BROWSER_UI_ROW+3,UI_NORMAL|DIALOG_ROW
         dc.l browser_none
-        dc.w 268,54,32,14,2,UI_NORMAL
+        dc.w 268,54,32,14,2,UI_NORMAL|DIALOG_REPEAT
         dc.l browser_up_label
-        dc.w 268,138,32,14,3,UI_NORMAL
+        dc.w 268,138,32,14,3,UI_NORMAL|DIALOG_REPEAT
         dc.l browser_down_label
         dc.w 16,190,182,14,4,UI_NORMAL
         dc.l browser_play_action

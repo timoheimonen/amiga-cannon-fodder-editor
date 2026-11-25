@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -120,6 +120,8 @@ menu_again:
         beq menu_phase_list
         cmpi.w #9,d0
         beq menu_settings
+        cmpi.w #10,d0
+        beq.s menu_help
         ; Unavailable actions leave every authored owner unchanged.
         moveq #EDTR_ASSET_UNPROVED,d1
 menu_message:
@@ -128,7 +130,15 @@ menu_message:
         bsr edtr_modal
         tst.w d0
         bmi menu_fail
-        bra.s menu_again
+        bra menu_again
+menu_help:
+        clr.w edtr_view_live
+        moveq #EDTR_DIALOG_MESSAGE,d0
+        moveq #EDTR_HELP,d1
+        bsr edtr_modal
+        tst.w d0
+        bmi menu_fail
+        bra menu_cancel
 menu_exit:
         move.w AUR_BASE+AUR_FLAGS,d0
         andi.w #AUR_HAS_SOURCE|AUR_DIRTY,d0
