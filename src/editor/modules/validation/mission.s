@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -16,7 +16,6 @@ vdm_scan_phase:
         cmp.l d1,d7
         bhs .return
         move.w #VDM_PAGE_ROWS,VD_CAPACITY
-        clr.w VD_RESERVED
         clr.l VD_ERRORS
         clr.l VD_REVIEWS
         clr.w VD_WRITTEN
@@ -58,10 +57,12 @@ vdm_scan_phase:
         move.w d0,VD_STATUS
         move.l VD_BASE,d1
         move.l d1,VD_TOTAL
-        addq.l #1,VD_TOTAL
         move.l #1,VD_ERRORS
         clr.l VD_REVIEWS
         clr.w VD_WRITTEN
+        cmpi.w #2,VD_FILTER
+        beq.s .complete
+        addq.l #1,VD_TOTAL
         cmp.l VD_SKIP,d1
         blo.s .complete
         lea VD_ROWS,a0
@@ -104,6 +105,7 @@ vdm_scan_mission:
         bsr vdm_inspect
         bne .return
 .current_only:
+        clr.w VD_FILTER
         moveq #0,d7
         lea VD_SUMMARIES,a5
 .phase:
@@ -138,9 +140,9 @@ vdm_scan_mission:
         tst.w d0
         rts
 
-; At most three phases can contribute to three displayed rows. Retire the modal
-; before entry. Each contributing phase is reread, then its full counts/bitsets
-; are compared with the initial summary before a row is accepted.
+; Errors across all phases precede reviews so play-blocking errors are never
+; hidden behind review items. Pass 1 reads errors (VD_FILTER=1) and pass 2
+; reads reviews (VD_FILTER=2), verifying each phase summary before accepting.
 vdm_read_page:
         movem.l d1-d7/a0-a6,-(sp)
         bsr vdm_check
@@ -152,14 +154,26 @@ vdm_read_page:
 .clear:
         clr.l (a0)+
         dbf d0,.clear
+        moveq #0,d5
+        moveq #1,d6
+.pass:
         moveq #0,d7
         lea VD_SUMMARIES,a5
 .phase:
-        move.l VDS_TOTAL(a5),d0
-        cmp.l VDM_SKIP,d0
+        move.l VDS_ERRORS(a5),d4
+        cmpi.w #1,d6
+        beq.s .count_ready
+        move.l VDS_REVIEWS(a5),d4
+.count_ready:
+        move.l d5,d3
+        add.l d4,d3
+        tst.l d4
+        beq .next
+        cmp.l VDM_SKIP,d3
         bls .next
-        move.l VDS_BASE(a5),VD_BASE
+        move.l d5,VD_BASE
         move.l VDM_SKIP,VD_SKIP
+        move.w d6,VD_FILTER
         move.l d7,d0
         bsr vdm_scan_phase
         bne .return
@@ -167,21 +181,18 @@ vdm_read_page:
         move.w VD_STATUS,d1
         cmp.w VDS_STATUS(a5),d1
         bne .return
-        move.l VD_TOTAL,d1
-        cmp.l VDS_TOTAL(a5),d1
-        bne .return
         move.l VD_ERRORS,d1
         cmp.l VDS_ERRORS(a5),d1
-        bne.s .return
+        bne .return
         move.l VD_REVIEWS,d1
         cmp.l VDS_REVIEWS(a5),d1
-        bne.s .return
+        bne .return
         move.l VD_OUTPUT+CFVR_ERRORS,d1
         cmp.l VDS_ERROR_BITS(a5),d1
-        bne.s .return
+        bne .return
         move.l VD_OUTPUT+CFVR_REVIEWS,d1
         cmp.l VDS_REVIEW_BITS(a5),d1
-        bne.s .return
+        bne .return
         moveq #0,d2
         move.w VD_WRITTEN,d2
         beq.s .next
@@ -201,10 +212,14 @@ vdm_read_page:
         subq.w #1,d2
         bne.s .copy
 .next:
+        move.l d3,d5
         adda.w #VDM_SUMMARY_BYTES,a5
         addq.w #1,d7
         cmp.b VDM_OWNER+AUR_PHASE_COUNT,d7
         blo .phase
+        addq.w #1,d6
+        cmpi.w #2,d6
+        bls .pass
 .done:
         bsr vdm_check
 .return:
@@ -256,19 +271,38 @@ vdm_jump:
         lea VD_SUMMARIES,a1
         adda.w d3,a1
         move.w VDS_SIZE(a1),d3
-        beq.s .return
+        beq .return
         subq.w #1,d3
         cmp.w d3,d1
         bls.s .x_bounded
         move.w d3,d1
 .x_bounded:
         move.w VDS_SIZE+2(a1),d3
-        beq.s .return
+        beq .return
         subq.w #1,d3
         cmp.w d3,d2
         bls.s .y_bounded
         move.w d3,d2
 .y_bounded:
+        ; Record whether a cell issue is a marker rule (E2, R2, R3) in E7_RESERVED.
+        moveq #0,d3
+        tst.w d5
+        bne.s .tool_flag_done
+        move.b 5(a0),d0
+        tst.b 4(a0)
+        bne.s .marker_review
+        cmpi.b #2,d0
+        bne.s .tool_flag_done
+        moveq #1,d3
+        bra.s .tool_flag_done
+.marker_review:
+        cmpi.b #2,d0
+        beq.s .is_marker
+        cmpi.b #3,d0
+        bne.s .tool_flag_done
+.is_marker:
+        moveq #1,d3
+.tool_flag_done:
         bsr vdm_test_mask
         move.b d0,d6
         move.w sr,-(sp)
@@ -280,7 +314,7 @@ vdm_jump:
         move.w d1,E7_X
         move.w d2,E7_Y
         move.w 8(a0),E7_INDEX
-        clr.w E7_RESERVED
+        move.w d3,E7_RESERVED
         move.b #E7_JUMP_PENDING,E7_STAGE
         move.l #E7_TAG,E7_CONTEXT
         move.w (sp)+,sr
@@ -308,8 +342,9 @@ vdm_apply_focus:
         subq.b #1,d1
         cmpi.b #1,d1
         bhi .return
-        tst.w E7_RESERVED
-        bne .return
+        move.w E7_RESERVED,d5
+        cmpi.w #1,d5
+        bhi .return
         cmpi.b #$3F,E7_TESTED
         bhi .return
         moveq #0,d3
@@ -325,13 +360,13 @@ vdm_apply_focus:
         divu #10,d4
 .index_bound:
         cmp.w d4,d3
-        bhs.s .return
+        bhs .return
         move.w E7_X,d1
         move.w E7_Y,d2
         cmp.w map_file_buffer+84,d1
-        bhs.s .return
+        bhs .return
         cmp.w map_file_buffer+86,d2
-        bhs.s .return
+        bhs .return
         subi.w #9,d1
         bpl.s .xmin
         clr.w d1
@@ -364,6 +399,24 @@ vdm_apply_focus:
         move.w d2,AUR_BASE+AUR_CAMERA_Y
         move.w d1,E7_X
         move.w d2,E7_Y
+        clr.w E7_RESERVED
+        ; Switch to Marker for marker cell issues, or Object with the target
+        ; object selected for object issues.
+        cmpi.b #2,E7_LOCATION
+        beq.s .focus_object
+        tst.w d5
+        beq.s .focus_tile
+        move.w #3,AUR_BASE+AUR_TOOL
+        bra.s .focus_done
+.focus_tile:
+        cmpi.w #2,AUR_BASE+AUR_TOOL
+        bne.s .focus_done
+        clr.w AUR_BASE+AUR_TOOL
+        bra.s .focus_done
+.focus_object:
+        move.w #2,AUR_BASE+AUR_TOOL
+        move.w E7_INDEX,AUR_BASE+AUR_OBJECT_INDEX
+.focus_done:
         move.b #E7_FOCUS_APPLIED,E7_STAGE
         move.w (sp)+,sr
         moveq #0,d0

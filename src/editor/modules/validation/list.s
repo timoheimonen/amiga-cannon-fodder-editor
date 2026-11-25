@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -134,8 +134,17 @@ vdm_list_refresh:
         bne.s .set
         moveq #UI_NORMAL,d3
         cmp.w VDM_FOCUS,d2
-        bne.s .set
+        bne.s .row_sev
         moveq #UI_ACTIVE,d3
+.row_sev:
+        cmpi.w #VDM_PAGE_ROWS,d2
+        bhs.s .set
+        move.w d2,d0
+        lsl.w #4,d0
+        lea VDM_PAGE,a0
+        tst.b 4(a0,d0.w)
+        bne.s .set
+        ori.w #DIALOG_ERROR,d3
 .set:
         suba.l a0,a0
         bsr dialog_set

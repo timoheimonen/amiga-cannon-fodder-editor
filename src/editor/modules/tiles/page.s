@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -17,8 +17,9 @@ tile_render:
         cmpi.w #PAGE_VISIBLE_ROWS,d4
         blo.s .row
         bsr.s tile_mark_selected
+        move.w #AUR_PAGE_NONE,TILE_DRAWN_HOVER
         bsr publish_ring
-        bsr tile_hover_update
+        bsr tile_hover_sync
         bsr tile_bar_refresh
         movem.l (sp)+,d0-d7/a0-a6
         rts
@@ -49,24 +50,43 @@ tile_grid_cell:
 
 ; Corners in the ink colour mark the selected tile when it is on the page.
 tile_mark_selected:
-        bsr tile_blitter_idle
-        moveq #0,d0
         move.w AUR_BASE+AUR_TILE,d0
-        divu #PAGE_COLS,d0
-        sub.w page_top,d0
-        cmpi.w #PAGE_VISIBLE_ROWS,d0
-        bhs.s .return
+        lea tile_corners(pc),a3
+        bra.s tile_mark_cell
+
+; Subtle dotted outline in the ink colour marks the hovered or focused tile.
+tile_mark_hover:
+        move.w page_hover,d0
+        cmpi.w #AUR_PAGE_NONE,d0
+        beq.s .return
+        lea tile_hover_frame(pc),a3
+        bsr.s tile_mark_cell
+        cmp.w AUR_BASE+AUR_TILE,d0
+        bne.s .return
+        bra.s tile_mark_selected
+.return:
+        rts
+
+; D0.w tile index, A3 = 16-word mask table. Clobbers D1-D6/A0-A2.
+tile_mark_cell:
+        bsr tile_blitter_idle
+        moveq #0,d1
         move.w d0,d1
-        mulu #640,d1
-        swap d0
-        add.w d0,d1
-        add.w d0,d1
+        divu #PAGE_COLS,d1
+        sub.w page_top,d1
+        cmpi.w #PAGE_VISIBLE_ROWS,d1
+        bhs.s .return
+        move.w d1,d2
+        mulu #640,d2
+        swap d1
+        add.w d1,d2
+        add.w d1,d2
         lea CANVAS,a0
-        adda.l d1,a0
+        adda.l d2,a0
         move.w TILE_INK,d2
         moveq #3,d3
 .plane:
-        lea tile_corners(pc),a1
+        movea.l a3,a1
         movea.l a0,a2
         moveq #15,d4
 .line:
@@ -88,6 +108,37 @@ tile_mark_selected:
 tile_corners:
         dc.w $F00F,$8001,$8001,$8001,0,0,0,0
         dc.w 0,0,0,0,$8001,$8001,$8001,$F00F
+tile_hover_frame:
+        dc.w $AAAA,0,$8001,0,$8001,0,$8001,0
+        dc.w $8001,0,$8001,0,$8001,0,$8001,$5555
+
+; Erase the previous hover outline on screen and draw the current one.
+tile_hover_sync:
+        movem.l d0-d6/a0-a3,-(sp)
+        move.w TILE_DRAWN_HOVER,d0
+        cmp.w page_hover,d0
+        beq.s .done
+        cmpi.w #AUR_PAGE_NONE,d0
+        beq.s .draw_new
+        moveq #0,d1
+        move.w d0,d1
+        divu #PAGE_COLS,d1
+        move.w d1,d4
+        sub.w page_top,d4
+        cmpi.w #PAGE_VISIBLE_ROWS,d4
+        bhs.s .draw_new
+        swap d1
+        move.w d1,d6
+        bsr tile_grid_cell
+        cmp.w AUR_BASE+AUR_TILE,d0
+        bne.s .draw_new
+        bsr tile_mark_selected
+.draw_new:
+        move.w page_hover,TILE_DRAWN_HOVER
+        bsr tile_mark_hover
+.done:
+        movem.l (sp)+,d0-d6/a0-a3
+        rts
 
 ; D0=0 no intent,1 chosen,2 cancel. Status comes from persistent page_error.
 tile_input:
@@ -102,12 +153,22 @@ tile_input:
         tst.w d6
         bne .cancel
         bsr tile_hover_update
+        cmpi.w #$C4,d0
+        bne.s .not_return
+        cmpi.w #AUR_PAGE_NONE,page_hover
+        beq.s .not_return
+        move.w page_hover,page_choice
+        moveq #1,d0
+        rts
+.not_return:
+        bsr tile_hover_sync
         bsr tile_bar_refresh
         tst.w d5
         beq.s .held_scroll
-        cmpi.w #AUR_PAGE_NONE,page_hover
+        bsr tile_pointer_cell
+        cmpi.w #AUR_PAGE_NONE,d0
         beq.s .controls
-        move.w page_hover,page_choice
+        move.w d0,page_choice
         moveq #1,d0
         rts
 .controls:
@@ -115,18 +176,34 @@ tile_input:
         moveq #-1,d1
         tst.w d0
         bmi .idle
-        beq.s .scroll_now
+        beq .scroll_now
         moveq #1,d1
         cmpi.w #1,d0
-        beq.s .scroll_now
+        beq .scroll_now
         bra .cancel
 .held_scroll:
+        tst.w native_left_down
+        beq.s .held_keys
+        bsr tile_bar_hit
         moveq #-1,d1
-        cmpi.w #$4C,native_raw_key
+        tst.w d0
         beq.s .repeat
         moveq #1,d1
-        cmpi.w #$4D,native_raw_key
+        cmpi.w #1,d0
         beq.s .repeat
+.held_keys:
+        moveq #-PAGE_COLS,d1
+        cmpi.w #$4C,native_raw_key
+        beq .arrow_repeat
+        moveq #PAGE_COLS,d1
+        cmpi.w #$4D,native_raw_key
+        beq .arrow_repeat
+        moveq #-1,d1
+        cmpi.w #$4F,native_raw_key
+        beq .arrow_repeat
+        moveq #1,d1
+        cmpi.w #$4E,native_raw_key
+        beq .arrow_repeat
         moveq #0,d1
         move.w native_mouse_y,d0
         cmpi.w #UI_SCROLL_DOWN_Y,d0
@@ -149,20 +226,65 @@ tile_input:
         move.w #1,page_armed
 .repeat:
         tst.w d1
-        beq.s .no_direction
+        beq .no_direction
         cmp.w page_direction,d1
         bne.s .scroll_now
         subq.w #1,page_repeat
-        bpl.s .idle
+        bpl .idle
 .scroll_now:
         move.w d1,page_direction
         move.w #7,page_repeat
         move.w page_top,d0
         add.w d1,d0
         cmpi.w #PAGE_LAST_TOP,d0
-        bhi.s .idle
+        bhi .idle
         move.w d0,page_top
         bsr tile_render
+        bra .idle
+.arrow_repeat:
+        ; Distinguish arrow codes from row-scroll codes (-1/+1) by biasing +32.
+        move.w d1,d2
+        addi.w #32,d2
+        cmp.w page_direction,d2
+        bne.s .arrow_step
+        subq.w #1,page_repeat
+        bpl .idle
+.arrow_step:
+        move.w d2,page_direction
+        move.w #7,page_repeat
+        move.w page_hover,d0
+        cmpi.w #AUR_PAGE_NONE,d0
+        bne.s .arrow_move
+        move.w page_top,d0
+        mulu #PAGE_COLS,d0
+        bra.s .arrow_apply
+.arrow_move:
+        add.w d1,d0
+        bmi.s .idle
+        cmpi.w #PAGE_TILE_COUNT,d0
+        bhs.s .idle
+.arrow_apply:
+        move.w d0,page_hover
+        moveq #0,d1
+        move.w d0,d1
+        divu #PAGE_COLS,d1
+        cmp.w page_top,d1
+        bhs.s .arrow_below
+        move.w d1,page_top
+        bsr tile_render
+        bra.s .idle
+.arrow_below:
+        move.w page_top,d2
+        addi.w #PAGE_VISIBLE_ROWS,d2
+        cmp.w d2,d1
+        blo.s .arrow_visible
+        subi.w #PAGE_VISIBLE_ROWS-1,d1
+        move.w d1,page_top
+        bsr tile_render
+        bra.s .idle
+.arrow_visible:
+        bsr tile_hover_sync
+        bsr tile_bar_refresh
         bra.s .idle
 .no_direction:
         clr.w page_direction
@@ -174,24 +296,37 @@ tile_input:
         moveq #2,d0
         rts
 
+; Only a moving pointer overrides the keyboard focus cell.
 tile_hover_update:
-        move.w #AUR_PAGE_NONE,page_hover
+        move.l native_mouse_x,d1
+        cmp.l TILE_MOUSE_POS,d1
+        beq.s .return
+        move.l d1,TILE_MOUSE_POS
+        bsr.s tile_pointer_cell
+        move.w d0,page_hover
+.return:
+        rts
+
+; D0.w = tile index under the pointer, or AUR_PAGE_NONE. Clobbers D1.
+tile_pointer_cell:
         move.w native_mouse_x,d0
         addi.w #16,d0
         cmpi.w #304,d0
-        bhs.s .return
+        bhs.s .none
         move.w native_mouse_y,d1
         cmpi.w #TILE_BAR_Y,d1
-        bhs.s .return
+        bhs.s .none
         lsr.w #4,d0
         lsr.w #4,d1
         add.w page_top,d1
         mulu #PAGE_COLS,d1
         add.w d0,d1
         cmpi.w #PAGE_TILE_COUNT,d1
-        bhs.s .return
-        move.w d1,page_hover
-.return:
+        bhs.s .none
+        move.w d1,d0
+        rts
+.none:
+        move.w #AUR_PAGE_NONE,d0
         rts
 
 ; Choose the most contrasting terrain colour against colour 0 as the ink of
@@ -436,7 +571,7 @@ tile_bar_buttons:
         dc.w UI_TEXT_AT,104,5,148,UI_DIM,UI_CENTER
         dc.l TILE_READOUT
         dc.w UI_TEXT,4,20,296,UI_DIM,UI_LEFT
-        dc.b "Click a tile to choose it. Right click: cancel.",0
+        dc.b "Click or arrows+Return. Right click: cancel.",0
         even
         dc.w UI_END
 tile_band_list:

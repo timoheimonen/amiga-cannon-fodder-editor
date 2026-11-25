@@ -1,10 +1,12 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
 ; OBJV uses the ordinary by-value page receipt, with candidate NONE.
 ; Tool 2 enters the live object view. A terrain tool requests one object Undo
 ; while retaining that tool; the checked object publisher returns result 0.
+edtr_request_object_redo:
+        move.w #EDTR_NOTICE_REDO,edtr_notice
 edtr_request_object:
         move.l #$000AFFFF,-(sp)
         bra edtr_request_page
@@ -16,8 +18,8 @@ edtr_object_released:
 ; display or terrain operation exists. D7 is the typed result, not a pointer.
 edtr_object_result:
         tst.w d7
-        beq.s .cancel
-        bmi.s .message
+        beq .cancel
+        bmi .message
         ; The receipt has admitted exact actions1..8, with tool2 required.
         move.w d7,d0
         add.w d0,d0
@@ -34,12 +36,26 @@ edtr_object_result:
         dc.w .tool-.actions
         dc.w edtr_validation_released-.actions
         dc.w edtr_test_released-.actions
+        dc.w .recall_block-.actions
+        dc.w .terrain_redo-.actions
+.terrain_redo:
+        clr.l TERRAIN_OP
+        bsr terrain_context
+        bsr terrain_redo_apply
+        cmpi.w #1,d0
+        bne edtr_recovery_blocked
+        bra edtr_acquire_view
+.recall_block:
+        move.w #EDTR_NOTICE_RECALL,edtr_notice
+        clr.w AUR_BASE+AUR_TOOL
+        bra edtr_acquire_view
 .tool:
         ; Result 6: an explicit tool switch.
         bra edtr_acquire_view
 .terrain_undo:
         clr.l TERRAIN_OP
         bsr terrain_context
+        bsr terrain_redo_capture
         bsr tu_undo
         cmpi.w #1,d0
         bne edtr_recovery_blocked

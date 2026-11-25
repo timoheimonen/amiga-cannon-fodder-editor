@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -310,13 +310,19 @@ ui_button:
         rts
 
 ; Flat list row D1 X, D2 Y, D3 W, D6 H, D5 state, A2 label: panel, hover or
-; selection background, the label left-aligned four pixels in. Preserves all.
+; selection background, the label left-aligned four pixels in. Bit 8 of D5
+; (UI_ROW_ERROR) highlights an error row in UI_ERROR. Preserves all.
 ui_row:
         movem.l d0-d7/a2,-(sp)
+        bclr #8,d5
+        sne d7
         moveq #UI_PANEL,d0
         cmpi.w #UI_ACTIVE,d5
         bne.s .hover
         moveq #UI_SELECT,d0
+        tst.b d7
+        beq.s .fill
+        moveq #UI_ERROR,d0
         bra.s .fill
 .hover:
         cmpi.w #UI_HOVER,d5
@@ -328,7 +334,14 @@ ui_row:
         bsr ui_rect
         moveq #UI_INK,d0
         cmpi.w #UI_DISABLED,d5
-        bne.s .ink
+        beq.s .dim
+        tst.b d7
+        beq.s .ink
+        cmpi.w #UI_ACTIVE,d5
+        beq.s .ink
+        moveq #UI_ERROR,d0
+        bra.s .ink
+.dim:
         moveq #UI_DIM,d0
 .ink:
         bsr ui_role

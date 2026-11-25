@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -110,6 +110,7 @@ edtr_payload_validate:
         ; BRW1 remains authoritative until all fallible asset setup completed.
         bsr aur_initialize
         bne edtr_recovery_blocked
+        bsr redo_clear
         cmpi.w #EDTR_NEW,EDTR_OPERATION
         bne edtr_acquire_view
         move.w map_file_buffer+84,d1
@@ -146,12 +147,15 @@ edtr_resume:
         andi.w #AUR_SAVE_PENDING|AUR_PAGE_PENDING,d1
         bne edtr_recovery_blocked
 edtr_finish_receipt:
+        cmpi.w #7,d5
+        beq edtr_test_save_now
         cmpi.w #6,d5
         beq edtr_validation_released
         cmpi.w #5,d5
         beq edtr_object_result
         cmpi.w #4,d5
         bne.s .ordinary_receipt
+        bsr redo_clear
         bsr edtr_large_commit
         bmi edtr_recovery_blocked
         bra edtr_acquire_view
@@ -213,13 +217,19 @@ edtr_acquire_view:
         ; origins first. It preserves them; render_view uses the same words.
         clr.l TERRAIN_OP
         clr.l TERRAIN_CURSOR_X
-        ; Marker and Inspect read the map at the cursor; only Paint and Fill
-        ; show the SAVED notice.
+        clr.w TERRAIN_SAVED_NOTICE
+        clr.w TERRAIN_OVERLAY
+        ; Show the SAVED notice in every terrain tool until the pointer moves
+        ; onto a new map cell or a button is pressed.
         cmpi.w #EDTR_NOTICE_SAVED,edtr_notice
         bne.s .cursor_ready
-        cmpi.w #1,AUR_BASE+AUR_TOOL
-        bhi.s .cursor_ready
         move.l #-1,TERRAIN_CURSOR_X
+        moveq #1,d0
+        cmpi.w #192,native_mouse_y
+        bhs.s .saved_count
+        moveq #2,d0
+.saved_count:
+        move.w d0,TERRAIN_SAVED_NOTICE
 .cursor_ready:
         clr.w TERRAIN_STROKE_BLOCK
         ; The brush is a tile again; the key V recalls a copied block.
@@ -229,8 +239,15 @@ edtr_acquire_view:
         clr.l BLOCK_FRAME
         clr.l BLOCK_FRAME+4
         clr.w AREA_PENDING
-        ; The Marker tool starts with its hint in the bar.
+        cmpi.w #EDTR_NOTICE_RECALL,edtr_notice
+        bne.s .recall_ready
+        clr.w edtr_notice
+        bsr block_recall
+.recall_ready:
+        ; The Marker tool starts with its hint in the bar (not right after Save).
         clr.w TERRAIN_MARKER_HINT
+        cmpi.w #EDTR_NOTICE_SAVED,edtr_notice
+        beq.s .hint_ready
         cmpi.w #3,AUR_BASE+AUR_TOOL
         bne.s .hint_ready
         move.w #2,TERRAIN_MARKER_HINT
@@ -267,7 +284,7 @@ edtr_view_idle:
         tst.w d0
         bmi edtr_recovery_blocked
         beq.s edtr_view_idle
-        cmpi.w #12,d0
+        cmpi.w #13,d0
         bhi edtr_recovery_blocked
         ; Index only the low word; Fill/large-stroke keep their high-word seed.
         add.w d0,d0
@@ -288,6 +305,7 @@ edtr_input_actions:
         dc.w edtr_request_validation-edtr_input_actions
         dc.w edtr_request_test-edtr_input_actions
         dc.w edtr_help-edtr_input_actions
+        dc.w edtr_request_object_redo-edtr_input_actions
 edtr_request_save:
         cmpi.w #1,edtr_view_live
         bne edtr_recovery_blocked
@@ -328,7 +346,12 @@ edtr_service_dispatch:
 .request:
         move.l (a0)+,(a1)+
         dbra d1,.request
-        move.l #EDITOR_SERIALIZER_BYTES,(a1)
+        move.l #EDITOR_SERIALIZER_BYTES,d0
+        cmpi.l #OBJECT_VIEW_MODULE_ID,-4(a1)
+        bne.s .capacity
+        move.l #EDITOR_MODULE_BYTES,d0
+.capacity:
+        move.l d0,(a1)
         move.w #REQ_ACTION_DISPATCH,EDITOR_SESSION_BASE+REQ_ACTION
         moveq #0,d0
         bra.s edtr_before_return
@@ -341,14 +364,15 @@ edtr_discard:
         ; Reached only from the explicit UNSAVED middle-button choice.
 edtr_close_released:
         bsr aur_validate
-        bne.s edtr_recovery_blocked
+        bne edtr_recovery_blocked
         tst.w edtr_view_live
-        bne.s edtr_recovery_blocked
+        bne edtr_recovery_blocked
         move.w AUR_BASE+AUR_FLAGS+PCREL(pc),d0
         andi.w #AUR_SAVE_PENDING|AUR_PAGE_PENDING,d0
-        bne.s edtr_recovery_blocked
+        bne edtr_recovery_blocked
         ; All fallible operations finished. The existing resident action0
         ; path receives a normal RTS, then reconstructs the campaign itself.
+        bsr redo_clear
         lea EDITOR_UNDO_BASE+PCREL(pc),a0
         move.w #EDITOR_UNDO_BYTES/4-1,d0
 .clear_undo:

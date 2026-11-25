@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -306,6 +306,15 @@ block_compose:
         move.b #'x',(a0)+
         move.w d3,d0
         bsr block_number
+        cmpi.w #1,TERRAIN_SELECT
+        bne.s .ok
+        move.w d2,d0
+        mulu d3,d0
+        cmpi.l #BLOCK_MAX_CELLS,d0
+        bls.s .ok
+        lea block_over_text(pc),a1
+        bsr bar_append
+.ok:
         moveq #1,d0
 .none:
         movem.l (sp)+,d2-d3
@@ -505,6 +514,7 @@ block_number:
 
 block_area_text: dc.b "Area ",0
 block_brush_text: dc.b "Block ",0
+block_over_text: dc.b " (>256)",0
 block_notices:
         dc.w .large-block_notices,.none-block_notices,.foreign-block_notices
 .large: dc.b "Area too large: 256 cells at most.",0

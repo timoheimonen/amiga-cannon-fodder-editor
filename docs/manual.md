@@ -9,7 +9,7 @@ original campaign.
 Your campaign is set aside while you use the editor or play a custom mission,
 and it is restored exactly as it was when you return to the hill.
 
-This manual describes version 1.2.5 for WHDLoad.
+This manual describes version 1.2.6 for WHDLoad.
 
 ## Contents
 
@@ -91,29 +91,35 @@ Everything in the editor is done with the mouse; keys are shortcuts.
 - **Right button:** cancel a dialog or page; on the map it picks up the tile
   or object under the pointer.
 - **Return** chooses the button framed in yellow (the default).
-- **Esc** cancels a dialog or page. On the map it opens the editor menu.
+- **Esc** cancels a dialog, a page, an active drag, a rectangle or copy
+  selection, or a copied block brush. On an idle map it opens the editor menu.
 - An **underlined letter** in a button is its key: press the letter to choose
   the button, for example **S** for **Save** in the menu.
 - The **arrow keys** move the yellow frame between the buttons of a dialog,
   so that Return chooses another button. In lists the arrow keys move the
   selection, and a **double click** on a row chooses its main action: play,
   edit or open a mission, edit a phase, or show a problem on the map.
-- A button acts when you release the mouse button over it; move the pointer
-  off the button before releasing to take a press back. The **-** and **+**
-  buttons act at once and repeat while held.
+- A button acts when you release the mouse button over it (including the
+  second-row command buttons on the editor's tool bar: Undo, Tiles/Delete,
+  Check, Test, Save and Menu); move the pointer off the button before releasing
+  to take a press back. The **-**, **+**, **Up** and **Down** buttons act at
+  once and repeat while held.
 - Buttons light up under the pointer. Dimmed buttons are not available at the
   moment.
 - **Cancel** in a dialog that the editor menu opened returns to the map; in a
   dialog opened from another dialog it returns to that dialog.
 - Confirmations name what they will do, and messages say what happened and
   what you can do about it.
-- The **Help** key on the map shows the tools and the keys on two pages:
+- The **Help** key, the **H** key, or **Help...** in the editor menu shows the
+  tools and the keys on two pages:
 
   ![The first Help page](screenshots/help-tools.png)
 
+  ![The second Help page](screenshots/help-keys.png)
+
   **Keys** (or **K**) shows the second page and **Tools** (or **T**) the
-  first; **Close**, Return or Esc returns to the map. In an emulator the
-  Amiga's Help key is one of the PC keyboard's keys, often Page Down; the
+  first; **Close** (or **C**), Return or Esc returns to the map. In an emulator
+  the Amiga's Help key is one of the PC keyboard's keys, often Page Down; the
   emulator's keyboard settings name it.
 
 ## 2. Playing custom missions
@@ -267,12 +273,51 @@ never scrolls the map. When a page or dialog closes with the pointer already
 in a scrolling zone, the map does not scroll until the pointer has left the
 zone once.
 
-### Undo
+### Overview map
+
+Press **M** in the map view or the Object tool to open the **Overview** minimap
+of the whole phase. It colours cells by passability (green ground, blue water,
+dark blocked/rocky ground, yellow hazards), marks soldiers in white, enemies in
+red and other objects in light grey, and frames the current viewport in yellow.
+
+![The Overview minimap](screenshots/overview.png)
+
+- Click anywhere on the minimap to jump the camera there immediately.
+- Click **Close** (or press **Esc**, **M**, **Return** or the right button) to
+  close without moving the camera.
+
+### Terrain-class overlay
+
+Press **P** in the map view to toggle a view-only passability overlay across
+the viewport (`[P]` appears at the end of the information line while active).
+Walkable `Ground` tiles stay clean; every other tile shows a compact badge in
+its top-left corner:
+
+![The terrain-class overlay on the map](screenshots/terrain-overlay.png)
+
+| Badge | Terrain class |
+| --- | --- |
+| **B** | Blocked |
+| **W** | Water |
+| **S** | Shallows |
+| **R** | Low rocks, High rocks |
+| **D** | Drop, Pit |
+| **Q** | Quicksand, Sinking |
+| **M** | Mixed (two classes in one tile) |
+| **+** | Rough, Slippery, Slope, Ramp |
+
+The overlay does not change the map or mark the mission unsaved, and turns off
+automatically when leaving the map view. In the Marker tool, cells with a
+marker still show their marker number.
+
+### Undo and Redo
 
 **Undo** (or **U**) reverses whole operations: a paint stroke, a fill, or
-placing, moving or deleting an object. The editor keeps about the last 256
-changes. Saving keeps the undo history; switching to another phase, Open, New,
-Resize, Test and Exit clear it. A change too large for the history asks first
+placing, moving or deleting an object. **Y** redoes the last undone operation
+(across both terrain and object edits); making a new edit clears the redo
+history. The editor keeps about the last 256 changes for Undo and 256 for Redo.
+Saving and **Test** keep both histories; switching to another phase, Open, New,
+Resize and Exit clear them. A change too large for the history asks first
 (see [Fill](#paint-and-fill)).
 
 ## 5. Terrain: tiles, Paint and Fill
@@ -284,13 +329,16 @@ page. It shows every tile of the mission's terrain, twelve rows at a time.
 
 ![The tile page of the jungle terrain](screenshots/tile-page.png)
 
-- The selected tile is marked by four corners.
-- The bottom line shows the tile under the pointer, its number and its
+- The selected tile is marked by four corners; the hovered or focused tile is
+  framed by a dotted outline.
+- The bottom line shows the hovered or focused tile, its number and its
   terrain class, for example `Tile 084 Ground`.
-- **Up** and **Down**, the arrow keys, or the pointer at the top or bottom of
-  the screen show more rows.
-- Click a tile to select it and return to the map. **Cancel**, Esc or the
-  right button return without changing the selection.
+- **Up** and **Down** (repeating while held) or the pointer at the top or
+  bottom of the screen scroll rows; the arrow keys move the focus cell by cell
+  across the grid (scrolling as needed) and **Return** selects the focused tile.
+- Click a tile to select it and return to the map (switching back to Paint if
+  Object, Marker or Inspect was active; Fill stays Fill). **Cancel**, Esc or
+  the right button return without changing the selection.
 
 The terrain class tells how the game treats the tile: soldiers walk on
 Ground, wade through Shallows, drown in Water, cannot pass Blocked, and so on.
@@ -335,7 +383,7 @@ To cover an area with one tile, drag a rectangle in Paint:
 ![A rectangle of jungle painted across the river, and a second one being dragged below it](screenshots/rectangle.png)
 
 The whole rectangle is one step for Undo. To give a rectangle up while you
-drag it, press the right button.
+drag it, press the right button or **Esc**.
 
 A rectangle of more than 256 cells (16 by 16 has exactly 256) cannot be
 undone, so the editor asks first with the Large change question shown
@@ -348,8 +396,9 @@ can copy an area of the map and stamp it elsewhere:
 
 1. Hold **Shift** and press the **right button** on one corner of the area.
 2. Drag to the opposite corner. The information line shows the size, for
-   example `Area 5x4`. You can let go of Shift. At a screen edge the map
-   scrolls one cell at a time while you select.
+   example `Area 5x4` (or `Area 17x16 (>256)` while it exceeds the 256-cell
+   limit). You can let go of Shift. At a screen edge the map scrolls one cell
+   at a time while you select.
 3. Release the button. The area is now Paint's brush and the line shows
    `Block 5x4`.
 4. Move the pointer to where the top left cell of the copy should go and
@@ -367,11 +416,12 @@ the map is cut off there.
 An area can have at most 256 cells, for example 16 by 16. A larger one is
 not copied: `Area too large: 256 cells at most.`
 
-A right click picks up the tile under the pointer, and Paint has a single
-tile again. The same happens when you choose another tool or open a page or
-the menu. Press **V** to get the copied block back. The copy is kept until
-you quit the game, so you can also press V in another phase or another
-mission and stamp the block there, as long as it has the same terrain
+Press **Esc** to cancel a selection or leave the copied block brush and return
+to your previous tile; a right click picks up the tile under the pointer, and
+Paint has a single tile again. The same happens when you choose another tool or
+open a page or the menu. Press **V** to get the copied block back. The copy is
+kept until you quit the game, so you can also press V in another phase or
+another mission and stamp the block there, as long as it has the same terrain
 (`Copied from another terrain.` otherwise).
 
 ## 6. Objects
@@ -393,7 +443,11 @@ Press **O** or click the active Object tool to open the object page.
   `P` marks vehicles for your squad and `E` enemy vehicles. Several objects
   take their pictures from the terrain: `10 SNOWMAN/CRATE` is a snowman on
   Ice and a crate in the Interior.
-- The highlighted row is shown on the right with its game graphics.
+- The highlighted row is shown on the right with its game graphics, and the
+  bottom line shows its part count and whether it uses a unit slot (for
+  example `28 E HELI GRENADE  (4 parts, unit)`). Use the **up and down arrow
+  keys** to move through the list one item at a time, or hold **Up** and
+  **Down** to scroll the list.
 - Click a row (or **Choose**, or Return) to select the type and return to the
   map. **Cancel**, Esc or the right button return without a change.
 
@@ -407,11 +461,13 @@ made of several parts are placed, moved and deleted as one object.
 | Action | How |
 | --- | --- |
 | Place the selected type | Left-click an empty spot on the map. The selected type follows the pointer as a preview |
-| Select an object | Left-click it. The information line shows its name and type number |
+| Select an object | Left-click it (or right-click to select and pick up its type). Corner brackets frame the selected object on the map and the information line shows its name, type number and ordinal (`2/3`) |
 | Move an object | Drag it with the left button |
 | Delete the selected object | **Delete** in the tool bar, or the **Del** key |
-| Go to the next object | The **Tab** key selects the next object of the phase and shows it in the middle of the screen; after the last object it starts from the first |
-| Pick up a type from the map | Right-click an object; its type becomes the selected type |
+| Go to next / previous object | **Tab** selects the next object of the phase (**B** or **Shift+Tab** selects the previous) and shows it in the middle of the screen |
+| Pick up a type from the map | Right-click an object; it is selected and its type becomes the selected type |
+
+![A selected object framed by corner brackets on the map](screenshots/object-selected.png)
 
 ![The tool bar with a selected object and its Delete button](screenshots/bar-object.png)
 
@@ -423,14 +479,16 @@ pointer onto the tool bar to see how much is in use:
 
 `Parts` counts every part of the phase's objects (a building with its door
 and roof is several parts), `Units` the parts up to the last person or
-vehicle, and `Squad` your soldiers. A placement that does not fit is refused:
+vehicle, and `Squad` your soldiers. A placement that does not fit names which
+limit was reached (43 parts, 30 unit slots or 8 soldiers):
 
 ![The Object not placed message](screenshots/object-not-placed.png)
 
 A phase always keeps at least one object, so the last object cannot be
 deleted (`Last object`). Objects cannot be placed in the map's first column
 or outside the map; a placement or drag there stops at the nearest allowed
-position.
+position, and if a multi-part object cannot move because a part would leave the
+map, the bar says `Move refused: part would leave the map.`.
 
 ### Vehicles
 
@@ -492,9 +550,11 @@ pointer, for checking unusual tiles:
 
 ![The tool bar of the Inspect tool](screenshots/bar-inspect.png)
 
-It shows the tile number, the tile's two raw terrain words (`HIT` and `SWP`),
-its terrain classes and, at the right, an 8 by 8 mask that shows which parts
-of a mixed tile use which class.
+It shows the tile number, the tile's two raw terrain words (`H` for HIT and
+`S` for SWP), its terrain class name (or both class names for a mixed tile,
+such as `Rough/Blocked`) and, at the right, an 8 by 8 mask that shows which
+parts of a mixed tile use which class. Right-clicking a cell picks up its tile
+for Paint/Fill without leaving Inspect.
 
 ## 8. The editor menu
 
@@ -517,11 +577,12 @@ author.
 | **Mission phases...** | Add, remove, reorder and set up the phases |
 | **Exit to hill** | Leave the editor and return to the hill |
 | **Settings...** | The titles and settings of the mission and of the phase being edited (see [Mission and phase settings](#mission-and-phase-settings)) |
+| **Help...** | Open the two Help pages (tools and keys) |
 | **Close** (Return, Esc) | Close the menu |
 
 The underlined letters are the items' keys: **N**, **T**, **O**, **S**, **A**,
-**R**, **P**, **X**, **E** and **C**. Cancel in any of these dialogs returns
-to the map.
+**R**, **P**, **X**, **E**, **H** and **C**. Cancel in any of these dialogs
+returns to the map.
 
 Whenever an action would lose changes that are not saved, the editor asks
 first:
@@ -555,7 +616,10 @@ mission. Every cell holds the terrain's first tile.
 ### Template
 
 The Template dialog lists the 24 missions of the original campaign, eight at a
-time; the heading line shows the position of the selection (`3 of 24`).
+time; the heading line shows the position of the selection (`3 of 24`), and the
+line below the list shows the highlighted entry's terrain family and phase count
+(on the mission list, plus grid size for single-phase missions) or terrain
+family and grid size (`Jungle A  74x80 cells` on the phase list).
 **Previous** and **Next** turn a page; the arrow keys move the selection one
 title and wrap around at either end. **Use** (or Return, or a click on the
 selected row) shows the phases of the selected mission, and **Use** again
@@ -622,11 +686,14 @@ you started from stays as it was.
 ![Typing the title of a new mission](screenshots/save-as.png)
 
 Type the title on the keyboard. The current title is selected when the
-dialog opens: the first character you type replaces it, and the left or right
-cursor key keeps it so that you can add to its end. Letters are upper case;
-digits and the punctuation of the game's font can be used. **Backspace** or
-**Del** (or the **Delete** button) removes the last character, **Space** adds
-a space and **Clear** empties the field. `Width 149 of 288` shows how much of the room on
+dialog opens: the first character you type replaces it, **Left** keeps it with
+the cursor at the start and **Right** keeps it with the cursor at the end. Once
+unselected, **Left** and **Right** move the vertical cursor inside the text so
+you can insert or edit characters anywhere in the title. Letters are upper case;
+digits and the punctuation of the game's font can be used. **Backspace** (or
+the **Delete** button) removes the character before the cursor, **Del** removes
+the character at the cursor, **Space** adds a space and **Clear** empties the
+field. `Width 149 of 288` shows how much of the room on
 the game's screens the title uses. A character that does not fit or that the
 game cannot show is refused with a red line that says why. **OK** (Return)
 accepts, **Cancel** (Esc) keeps the old title.
@@ -697,12 +764,16 @@ the phase.
 ### Mission and phase settings
 
 **Settings...** (in Mission phases or in the editor menu) shows every setting
-of the mission and of the phase being edited:
+of the mission and of the phase being edited, with mission-wide settings
+(**Mission** title and **Recruits**, shared by all phases) grouped above a
+divider and phase-specific settings below it:
 
 ![The Mission and phase settings dialog](screenshots/settings.png)
 
-**Rename** changes the mission title or the phase title, with the same title
-entry as Save as.
+**Rename** (**M** for mission, **N** for phase) changes the mission title or
+the phase title, with the same title entry as Save as. Objectives can be
+toggled with **1**-**8**, toggles with their underlined letters (**G**, **R**,
+**E**, **O**, **C**), and **Done** with **D** or Return.
 
 **Objectives** are toggle buttons; a phase can have several and needs at
 least one. The line below them explains the last objective you changed:
@@ -746,23 +817,26 @@ when the settings were opened from the editor menu.
 
 **Check** in the tool bar (or the **C** key) examines the whole mission and lists every problem:
 
-![Check results: six points to review](screenshots/check.png)
+![Check results: two points to review](screenshots/check.png)
 
 The heading counts the errors and the points to review. The line below shows
 which issues are on the page and which phases you have already won in test
 play (`Tested`). Each row shows:
 
-- **Error** or **Review**. An error must be fixed before the phase can be
-  played or tested. A point to review does not stop play; it is something only
-  playing can confirm.
+- **Error** or **Review**. Play-blocking errors are listed first and
+  highlighted in red so they are never hidden behind review items; an error
+  must be fixed before the phase can be played or tested. A point to review
+  does not stop play; it is something only playing can confirm.
 - The phase (`P1` is phase 1).
 - The place, if the problem has one: a map cell (`Cell 37,4`) or an object.
 - The problem in a few words.
 
 Click a row (or use the arrow keys) to see what it means and what to do
 about it. **Show on map** (Return, or a double click on the row) takes you to
-the place of the selected problem, also in another phase. **Previous** and **Next** show more problems; **Close** (Esc) returns
-to the map.
+the place of the selected problem, also in another phase, switching to Marker
+for marker issues and to Object with the object selected for object issues.
+**Previous** and **Next** show more problems; **Close** (Esc) returns to the
+map.
 
 ![Check results with two errors: the phase asks for hostages to be rescued, but there are none](screenshots/check-error.png)
 
@@ -771,15 +845,18 @@ not saved with the mission.
 
 ### Test
 
-**Test** (or the **G** key) saves the mission and plays the phase you are editing, starting with
-its briefing. Press **Esc** during play to abort.
+**Test** (or the **G** key) checks the phase you are editing and plays it,
+starting with its briefing. If the mission has unsaved changes, Test saves it
+first (once the phase passes the error check); if the mission is already saved
+and unchanged, Test starts right away without saving again. Press **Esc** during
+play to abort.
 
 ![Test play of the second phase](screenshots/test-play.png)
 
 When the phase ends, whether you win, lose or abort, the editor returns
-exactly as you left it, with the same tool, selection and map position. The
-undo history is cleared. If the phase has an error, Test saves the mission
-and shows the Check results instead of playing.
+exactly as you left it, with the same tool, selection, map position, and undo
+and redo history. If the phase has an error, Test shows the Check results
+immediately without saving or playing.
 
 ## 11. Files, limits and messages
 
@@ -881,7 +958,7 @@ ID the mission got.
 | F1-F5 | Map | Paint, Fill, Object, Marker, Inspect |
 | T | Map | Tile page |
 | O | Map | Object page |
-| U | Map | Undo |
+| U / Y | Map | Undo / Redo |
 | V | Map | Paint with the copied block again |
 | Shift + left button | Map, Paint | Drag a rectangle of the selected tile |
 | Shift + right button | Map, Paint | Select an area to copy |
@@ -889,15 +966,17 @@ ID the mission got.
 | G | Map | Test (go) |
 | S | Map | Save |
 | Del | Map | Delete the selected object |
-| Tab | Map, Object | Select the next object and show it |
+| Tab / B (Shift+Tab) | Map, Object | Select the next / previous object and show it |
 | Arrow keys | Map | Scroll one cell per press |
 | Shift | Map | With the pointer at a screen edge: scroll a screen at a time |
 | Arrow keys | Lists and pages | Move the selection or scroll; left and right change the object group |
 | Arrow keys | Dialogs | Move the yellow frame to another button (in lists: the keys the list does not use) |
 | Underlined letter | Dialogs | Choose that button (not in title entry, where letters type) |
 | Double click | Lists | Play, edit or open the mission, edit the phase, show the problem on the map |
-| Esc | Map | Open the menu |
-| Help | Map | The Help pages |
+| Esc | Map | Cancel drag, selection or block brush; otherwise open the menu |
+| M | Map | Overview minimap (click to jump) |
+| P | Map | Terrain-class (passability) overlay |
+| Help, H | Map | The Help pages |
 | Esc | Dialogs and pages | Cancel or close |
 | Return | Dialogs | Choose the framed button (the default unless the arrow keys moved the frame) |
 | Left, Right | Title entry | Keep the selected title and edit it |

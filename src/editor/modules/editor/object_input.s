@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -19,6 +19,14 @@ object_input:
         clr.w native_left_pressed
         move.w native_right_pressed,d4
         clr.w native_right_pressed
+        move.w d5,d0
+        or.w d4,d0
+        beq.s .noticed
+        tst.w TERRAIN_BLOCK_NOTICE
+        beq.s .noticed
+        clr.w TERRAIN_BLOCK_NOTICE
+        ori.w #1,TERRAIN_BAR_DIRTY
+.noticed:
         move.w native_last_key,d0
         clr.w native_last_key
         cmpi.w #$C5,d0
@@ -29,10 +37,16 @@ object_input:
 .key:
         cmpi.w #'U',d0
         beq .undo
+        cmpi.w #'Y',d0
+        beq .redo
         cmpi.w #'T',d0
         beq .tiles
         cmpi.w #'O',d0
         beq .objects
+        ; V recalls a copied terrain block and switches to Paint.
+        moveq #9,d1
+        cmpi.w #'V',d0
+        beq .command
         ; C, G and S act as the Check, Test and Save buttons.
         moveq #7,d1
         cmpi.w #'C',d0
@@ -43,13 +57,19 @@ object_input:
         moveq #1,d1
         cmpi.w #'S',d0
         beq .command
-        ; The Help key leaves as a message does.
+        ; The Help key or H leaves as a message does; M opens Overview.
         moveq #EDTR_HELP,d1
         cmpi.w #$DF,d0
         beq .command
-        ; Tab selects the next object.
+        cmpi.w #'H',d0
+        beq .command
+        cmpi.w #'M',d0
+        beq .overview
+        ; Tab selects the next object (Shift+Tab or B selects the previous).
         cmpi.w #$C2,d0
-        beq .next
+        beq .tab
+        cmpi.w #'B',d0
+        beq .prev
         subi.w #$D0,d0
         cmpi.w #4,d0
         bhi.s .raw
@@ -88,6 +108,7 @@ object_input:
         move.w d0,-(sp)
         moveq #-1,d0
         bsr bar_hover
+        bsr bar_press_cancel
         move.w (sp)+,d0
         move.w view_origin_x,d2
         lsl.w #4,d2
@@ -104,6 +125,10 @@ object_input:
         cmp.w TERRAIN_CURSOR_Y,d1
         beq.s .map_actions
 .cursor:
+        tst.w TERRAIN_CURSOR_X
+        bpl.s .cursor_store
+        ori.w #1,TERRAIN_BAR_DIRTY
+.cursor_store:
         move.w d0,TERRAIN_CURSOR_X
         move.w d1,TERRAIN_CURSOR_Y
         ori.w #4,TERRAIN_BAR_DIRTY
@@ -130,7 +155,7 @@ object_input:
         move.w 8(a0),AUR_BASE+AUR_OBJECT_TYPE
         ori.w #1,TERRAIN_BAR_DIRTY
         tst.w d4
-        bne .preview
+        bne .repaint
         move.w d0,OBJECT_DRAG_INDEX
         sub.w 4(a0),d2
         subi.w #16,d2
@@ -172,11 +197,14 @@ object_input:
         moveq #1,d0
         bsr object_edit
         ; A refused move (a companion would leave the map) leaves the
-        ; object where it was.
+        ; object where it was and says why in the bar.
         cmpi.l #-1,d0
-        beq .repaint
+        beq.s .move_refused
         tst.l d0
         bmi .edit_refused
+        bra .repaint
+.move_refused:
+        move.w #1,TERRAIN_BLOCK_NOTICE
         bra .repaint
 .preview:
         bsr object_clamp
@@ -199,8 +227,7 @@ object_input:
         bne.s .on_bar
         ori.w #1,TERRAIN_BAR_DIRTY
 .on_bar:
-        tst.w d5
-        beq .idle
+        bsr bar_press_step
         tst.w d0
         bmi .idle
         cmpi.w #BAR_INSPECT,d0
@@ -238,12 +265,13 @@ object_input:
         move.w d0,-(sp)
         moveq #-1,d0
         bsr bar_hover
+        bsr bar_press_cancel
         move.w (sp)+,d0
         bsr restore_item
         tst.w OBJECT_DRAG_INDEX
-        bmi.s .idle
+        bmi .idle
         tst.w native_left_down
-        bne.s .idle
+        bne .idle
 .cancel_drag:
         bsr restore_item
         move.w #-1,OBJECT_DRAG_INDEX
@@ -254,12 +282,24 @@ object_input:
         bsr restore_item
         bsr object_undo_edit
         tst.l d0
-        bmi.s .error
+        bmi .error
         beq.s .idle
         cmpi.w #2,d0
         bne.s .repaint
         moveq #5,d0
-        bra.s .return
+        bra .return
+.redo:
+        tst.w OBJECT_DRAG_INDEX
+        bpl.s .cancel_drag
+        bsr restore_item
+        bsr object_redo_edit
+        tst.l d0
+        bmi .error
+        beq.s .idle
+        cmpi.w #2,d0
+        bne.s .repaint
+        moveq #10,d0
+        bra .return
 .delete:
         tst.w OBJECT_DRAG_INDEX
         bpl.s .cancel_drag
@@ -272,10 +312,10 @@ object_input:
         cmpi.l #-2,d0
         bne.s .deleted
         moveq #OBJECT_LAST_ITEM,d0
-        bra.s .return
+        bra .return
 .deleted:
         tst.l d0
-        bmi.s .edit_refused
+        bmi .edit_refused
         beq.s .idle
 .repaint:
         bsr render_view
@@ -288,20 +328,53 @@ object_input:
         bsr draw_toolbar
 .quiet:
         moveq #0,d0
-        bra.s .return
+        bra .return
 .menu:
         moveq #2,d0
-        bra.s .return
+        bra .return
+.overview:
+        tst.w OBJECT_DRAG_INDEX
+        bpl .cancel_drag
+        bsr overview_show
+        bra .idle
 .tiles:
         moveq #3,d0
-        bra.s .return
+        bra .return
 .objects:
         moveq #4,d0
-        bra.s .return
+        bra .return
 .edit_refused:
         moveq #OBJECT_EDIT_REFUSED,d0
-        bra.s .return
+        bra .return
 .no_room:
+        bsr object_counts
+        move.w AUR_BASE+AUR_OBJECT_TYPE,d3
+        bne.s .chk_parts
+        cmpi.w #8,d2
+        blo.s .chk_parts
+        moveq #OBJECT_NO_SQUAD,d0
+        bra.s .return
+.chk_parts:
+        lsl.w #2,d3
+        lea ot_shared_recipes(pc),a0
+        move.b 0(a0,d3.w),d4
+        moveq #3,d3
+        and.w d4,d3
+        addq.w #1,d3
+        add.w d3,d0
+        cmpi.w #43,d0
+        bls.s .chk_units
+        moveq #OBJECT_NO_PARTS,d0
+        bra.s .return
+.chk_units:
+        tst.b d4
+        bpl.s .generic_room
+        add.w d3,d1
+        cmpi.w #30,d1
+        bls.s .generic_room
+        moveq #OBJECT_NO_UNITS,d0
+        bra.s .return
+.generic_room:
         moveq #OBJECT_NO_ROOM,d0
         bra.s .return
 .error:
@@ -310,13 +383,23 @@ object_input:
         movem.l (sp)+,d1-d7/a0-a6
         tst.w d0
         rts
-; Tab: the object after the selected one, or the first after the last, is
-; selected as a click selects it and comes to the middle of the view. It
-; ends a drag instead, as a command key does.
+; Tab: next object (Shift+Tab or B: previous object), selected and brought
+; to the middle of the view. Ends a drag instead, as a command key does.
+.tab:
+        move.w OBJECT_LAST_RAW,d1
+        lsr.w #1,d1
+        cmpi.w #$30,d1
+        beq.s .prev
 .next:
         tst.w OBJECT_DRAG_INDEX
         bpl .cancel_drag
         bsr object_next
+        bra.s .focus_found
+.prev:
+        tst.w OBJECT_DRAG_INDEX
+        bpl .cancel_drag
+        bsr object_prev
+.focus_found:
         bmi .idle
         bsr restore_item
         clr.w preview_state+pv_count
@@ -333,6 +416,355 @@ object_input:
         bsr set_camera
         bne .error
         bra .repaint
+
+; D0.w=the selectable object before the selected one, or the last of all when
+; none precedes (or none is selected), -1 when the phase has none; A0=record.
+object_prev:
+        movem.l d1-d7/a1-a6,-(sp)
+        moveq #0,d6
+        move.w EDITOR_METADATA_BASE+CFMD_SPT_BYTES,d6
+        divu #10,d6
+        move.w AUR_BASE+AUR_OBJECT_INDEX,d5
+        moveq #-1,d3
+        suba.l a3,a3
+        moveq #-1,d4
+        suba.l a4,a4
+        moveq #0,d7
+        lea EDITOR_SPT_BASE,a5
+.root:
+        cmp.w d6,d7
+        bhs.s .done
+        move.w 8(a5),d0
+        move.w d0,d1
+        add.w d1,d1
+        lea op_part_index(pc),a0
+        tst.w 0(a0,d1.w)
+        beq.s .step
+        cmpi.w #$7FEF,4(a5)
+        bhi.s .step
+        tst.w 6(a5)
+        bmi.s .step
+        move.w d7,d3
+        movea.l a5,a3
+        tst.w d5
+        bmi.s .step
+        cmp.w d5,d7
+        bge.s .step
+        move.w d7,d4
+        movea.l a5,a4
+.step:
+        lsl.w #2,d0
+        lea ot_shared_recipes(pc),a0
+        move.b 0(a0,d0.w),d0
+        andi.w #3,d0
+        addq.w #1,d0
+        add.w d0,d7
+        mulu #10,d0
+        adda.w d0,a5
+        bra.s .root
+.done:
+        tst.w d4
+        bpl.s .have_prev
+        move.w d3,d4
+        movea.l a3,a4
+.have_prev:
+        movea.l a4,a0
+        move.w d4,d0
+        movem.l (sp)+,d1-d7/a1-a6
+        tst.w d0
+        rts
+
+; Draw corner brackets around the selected placed object (AUR_OBJECT_INDEX)
+; in screen space, clipped to pv_clip_*. Skipped while dragging or unselected.
+object_draw_selection:
+        movem.l d0-d7/a0-a6,-(sp)
+        tst.w OBJECT_DRAG_INDEX
+        bpl .out
+        move.w AUR_BASE+AUR_OBJECT_INDEX,d0
+        bmi .out
+        moveq #0,d1
+        move.w EDITOR_METADATA_BASE+CFMD_SPT_BYTES,d1
+        divu #10,d1
+        cmp.w d1,d0
+        bhs .out
+        mulu #10,d0
+        lea EDITOR_SPT_BASE,a5
+        adda.w d0,a5
+        move.w 8(a5),d0
+        cmpi.w #110,d0
+        bhi .out
+        add.w d0,d0
+        lea op_part_index(pc),a0
+        move.w 0(a0,d0.w),d0
+        beq .out
+        adda.w d0,a0
+        move.w (a0)+,d4
+        beq .out
+        subq.w #1,d4
+        movea.l a0,a6
+        moveq #0,d5
+        ; Accumulate union screen box: (D2=x0, D3=y0, D6=x1, D7=y1) as words.
+        move.w #$7FFF,d2
+        move.w #$7FFF,d3
+        move.w #$8000,d6
+        move.w #$8000,d7
+        moveq #0,d1
+.part_box:
+        movea.l a5,a3
+        cmpi.w #$3C,8(a5)
+        bne.s .box_anchor
+        tst.w d5
+        beq.s .box_anchor
+        lea 10(a5),a3
+.box_anchor:
+        cmpi.w #$7FEF,4(a3)
+        bhi .box_next
+        tst.w 6(a3)
+        bmi .box_next
+        cmpi.w #$18,8(a5)
+        bne.s .box_native
+        lea OBJECT_ANCHOR_DESC,a1
+        bra.s .box_desc
+.box_native:
+        moveq #0,d0
+        move.b (a6),d0
+        lsl.w #2,d0
+        lea editor_game_sprites,a1
+        movea.l 0(a1,d0.w),a1
+        moveq #0,d0
+        move.b 1(a6),d0
+        lsl.w #4,d0
+        adda.w d0,a1
+.box_desc:
+        ; Screen left = 4(a3)+16 + dx + anchor_x - view_origin_x*16
+        moveq #0,d0
+        move.w 4(a3),d0
+        addi.l #16,d0
+        move.b 2(a6),d1
+        ext.w d1
+        ext.l d1
+        add.l d1,d0
+        move.b DESC_ANCHOR_X(a1),d1
+        ext.w d1
+        ext.l d1
+        add.l d1,d0
+        moveq #0,d1
+        move.w view_origin_x,d1
+        lsl.l #4,d1
+        sub.l d1,d0
+        cmpi.l #-2048,d0
+        blt .box_next
+        cmpi.l #2048,d0
+        bgt .box_next
+        cmp.w d2,d0
+        bge.s .x0_ok
+        move.w d0,d2
+.x0_ok:
+        moveq #0,d1
+        move.w DESC_WORDS(a1),d1
+        subq.w #1,d1
+        lsl.w #4,d1
+        add.w d1,d0
+        cmp.w d6,d0
+        ble.s .x1_ok
+        move.w d0,d6
+.x1_ok:
+        ; Screen bottom = 6(a3) + dy + anchor_y - view_origin_y*16
+        moveq #0,d0
+        move.w 6(a3),d0
+        move.b 3(a6),d1
+        ext.w d1
+        ext.l d1
+        add.l d1,d0
+        move.b DESC_ANCHOR_Y(a1),d1
+        ext.w d1
+        ext.l d1
+        add.l d1,d0
+        moveq #0,d1
+        move.w view_origin_y,d1
+        lsl.l #4,d1
+        sub.l d1,d0
+        cmpi.l #-2048,d0
+        blt.s .box_next
+        cmpi.l #2048,d0
+        bgt.s .box_next
+        cmp.w d7,d0
+        ble.s .y1_ok
+        move.w d0,d7
+.y1_ok:
+        sub.w DESC_ROWS(a1),d0
+        cmp.w d3,d0
+        bge.s .box_next
+        move.w d0,d3
+.box_next:
+        lea 6(a6),a6
+        addq.w #1,d5
+        dbra d4,.part_box
+        ; Inclusive [x0..x1-1] x [y0..y1-1]; reject empty or off-screen boxes.
+        subq.w #1,d6
+        subq.w #1,d7
+        cmp.w d6,d2
+        bgt .out
+        cmp.w d7,d3
+        bgt .out
+        cmpi.w #304,d2
+        bge .out
+        tst.w d6
+        bmi .out
+        cmpi.w #192,d3
+        bge .out
+        tst.w d7
+        bmi .out
+        tst.w d2
+        bpl.s .cx0
+        moveq #0,d2
+.cx0:
+        cmpi.w #303,d6
+        ble.s .cx1
+        move.w #303,d6
+.cx1:
+        tst.w d3
+        bpl.s .cy0
+        moveq #0,d3
+.cy0:
+        cmpi.w #191,d7
+        ble.s .cy1
+        move.w #191,d7
+.cy1:
+        ; Arm length = min(4, (x1-x0)/2, (y1-y0)/2).
+        moveq #4,d4
+        move.w d6,d0
+        sub.w d2,d0
+        lsr.w #1,d0
+        cmp.w d4,d0
+        bhs.s .arm_y
+        move.w d0,d4
+.arm_y:
+        move.w d7,d0
+        sub.w d3,d0
+        lsr.w #1,d0
+        cmp.w d4,d0
+        bhs.s .arm_ok
+        move.w d0,d4
+.arm_ok:
+        bsr exit_ui_blitter_idle
+        ; Draw the 4 corners: inner colour-0 shadow first, then terrain_font_ink.
+        move.w d2,d0
+        move.w d3,d1
+        moveq #1,d5
+        movea.w #1,a4
+        bsr.s .corner
+        move.w d6,d0
+        move.w d3,d1
+        moveq #-1,d5
+        movea.w #1,a4
+        bsr.s .corner
+        move.w d2,d0
+        move.w d7,d1
+        moveq #1,d5
+        movea.w #-1,a4
+        bsr.s .corner
+        move.w d6,d0
+        move.w d7,d1
+        moveq #-1,d5
+        movea.w #-1,a4
+        bsr.s .corner
+.out:
+        movem.l (sp)+,d0-d7/a0-a6
+        rts
+
+; Draw one corner at (D0.w, D1.w) extending by D4.w pixels along D5.w (dx)
+; and A4.w (dy): inner shadow in colour 0, outer bracket in terrain_font_ink.
+.corner:
+        movem.l d0-d3/d6-d7,-(sp)
+        move.w d0,d6
+        move.w d1,d7
+        cmpi.w #2,d4
+        blo.s .outer
+        ; Inner shadow shifted 1 pixel inward along (dx, dy).
+        moveq #0,d2
+        move.w d4,d3
+        subq.w #1,d3
+        move.w d6,d0
+        add.w d5,d0
+        move.w d7,d1
+        add.w a4,d1
+.sh_h:
+        bsr.s .plot
+        add.w d5,d0
+        dbra d3,.sh_h
+        move.w d4,d3
+        subq.w #1,d3
+        move.w d6,d0
+        add.w d5,d0
+        move.w d7,d1
+        add.w a4,d1
+.sh_v:
+        bsr.s .plot
+        add.w a4,d1
+        dbra d3,.sh_v
+.outer:
+        move.w terrain_font_ink,d2
+        move.w d4,d3
+        move.w d6,d0
+        move.w d7,d1
+.in_h:
+        bsr.s .plot
+        add.w d5,d0
+        dbra d3,.in_h
+        move.w d4,d3
+        move.w d6,d0
+        move.w d7,d1
+.in_v:
+        bsr.s .plot
+        add.w a4,d1
+        dbra d3,.in_v
+        movem.l (sp)+,d0-d3/d6-d7
+        rts
+
+; Plot screen pixel (D0.w, D1.w) in colour D2.w, clipped to pv_clip_*.
+.plot:
+        cmp.w preview_state+pv_clip_left,d0
+        blt.s .p_out
+        cmp.w preview_state+pv_clip_right,d0
+        bge.s .p_out
+        cmp.w preview_state+pv_clip_top,d1
+        blt.s .p_out
+        cmp.w preview_state+pv_clip_bottom,d1
+        bge.s .p_out
+        movem.l d3-d4/a0,-(sp)
+        move.w d1,d3
+        mulu #ROW_BYTES,d3
+        move.w d0,d4
+        lsr.w #3,d4
+        add.w d4,d3
+        add.w ring_base,d3
+        cmpi.w #RING_BYTES,d3
+        blo.s .p_in
+        subi.w #RING_BYTES,d3
+.p_in:
+        moveq #7,d4
+        and.w d0,d4
+        neg.w d4
+        addq.w #7,d4
+        lea CANVAS,a0
+        adda.w d3,a0
+        moveq #0,d3
+.p_plane:
+        btst d3,d2
+        beq.s .p_clr
+        bset d4,(a0)
+        bra.s .p_next
+.p_clr:
+        bclr d4,(a0)
+.p_next:
+        adda.w #DISPLAY_PLANE,a0
+        addq.w #1,d3
+        cmpi.w #4,d3
+        blo.s .p_plane
+        movem.l (sp)+,d3-d4/a0
+.p_out:
+        rts
 
 ; D0.w=the first object after the selected one that a click could select,
 ; the first of all when none follows, -1 when the phase has none; A0=its

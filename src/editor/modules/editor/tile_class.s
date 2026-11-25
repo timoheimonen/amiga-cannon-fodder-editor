@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -16,12 +16,20 @@ bar_class_name:
         tst.w d0
         bmi.s .return
         andi.w #15,d0
+        bsr.s bar_class_by_id
+.return:
+        move.l (sp)+,d0
+        rts
+
+; D0.w class 0..15 -> A1 its terrain class name. Preserves D0-D7/A0.
+bar_class_by_id:
+        move.l d0,-(sp)
+        andi.w #15,d0
         add.w d0,d0
         lea bar_class_offsets(pc),a1
         move.w 0(a1,d0.w),d0
         lea bar_class_names(pc),a1
         adda.w d0,a1
-.return:
         move.l (sp)+,d0
         rts
 

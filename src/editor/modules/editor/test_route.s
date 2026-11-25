@@ -1,19 +1,54 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
 edtr_request_test:
         bsr edtr_release_view
 edtr_test_released:
+        ; A clean saved mission with identity phase mapping enters Test
+        ; directly without a redundant Save; cf_test.mod still verifies the
+        ; on-disk copy against the live draft before gameplay starts.
+        cmpi.w #AUR_HAS_SOURCE,AUR_BASE+AUR_FLAGS
+        bne.s .precheck
+        tst.l AUR_BASE+AUR_SOURCE_BYTES
+        beq.s .precheck
+        lea AUR_BASE+AUR_PHASE_MAP,a0
+        moveq #0,d0
+        move.b AUR_BASE+AUR_PHASE_COUNT,d0
+        moveq #0,d1
+.id_check:
+        moveq #-1,d2
+        cmp.w d0,d1
+        bhs.s .id_cmp
+        move.w d1,d2
+.id_cmp:
+        cmp.b (a0)+,d2
+        bne.s .precheck
+        addq.w #1,d1
+        cmpi.w #6,d1
+        blo.s .id_check
+        bra.s edtr_test_saved
+.precheck:
+        ; Dirty or unsaved drafts check the current phase for gameplay errors
+        ; in RAM before spending time on Save.
+        move.b #E7_TEST_PRECHECK,E7_STAGE
+        move.l #$000EFFFF,-(sp)
+        bra edtr_page_released
+edtr_test_save_now:
         move.w #AUR_CONTINUE_TEST,AUR_BASE+AUR_EXIT_REQUEST
         bra edtr_save_released
-; This branch is reachable only after exact entered SAVE proof was consumed.
+; Reached for a clean saved mission or after exact entered SAVE proof.
 edtr_test_saved:
         move.b #E7_TEST_READY,E7_STAGE
         move.l #$000EFFFF,-(sp)
         bra edtr_page_released
 
 edtr_test_receipt:
+        cmpi.w #2,d2
+        bne.s .returned
+        moveq #7,d5
+        bra.s edtr_test_cancel
+.returned:
         cmpi.w #1,d2
         bne.s .error
         cmpi.w #AUR_ASSETS_INCOMPLETE,AUR_ASSET_STATE(a5)

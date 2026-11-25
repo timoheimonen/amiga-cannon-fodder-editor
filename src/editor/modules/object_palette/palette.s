@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -82,7 +82,7 @@ pal_after_view:
         move.w #1,edtr_view_live
         bsr pal_render
         tst.w page_error
-        bne.s pal_render_error
+        bne pal_render_error
 .drain:
         clr.w native_last_key
         clr.w native_left_pressed
@@ -101,6 +101,7 @@ pal_after_view:
         clr.w native_last_key
         clr.w native_left_pressed
         clr.w native_right_pressed
+        move.l native_mouse_x,PAL_MOUSE_POS
 pal_idle:
         jsr wait_frame
         jsr editor_pointer_update
@@ -214,6 +215,8 @@ pal_editor_request:
         include "../editor/object_parts.s"
         include "../editor/object_anchor.s"
         include "catalog.i"
+pal_recipes:
+        include "../object_transactions/insert_companions.i"
         include "../storage/read.s"
         include "../storage/payload.s"
 opal_end:

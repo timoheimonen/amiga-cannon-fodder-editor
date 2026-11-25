@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -231,6 +231,7 @@ edtr_receive_tile:
         bne edtr_receive_return
         clr.l E7_CONTEXT
 .assets_required:
+        bsr redo_clear
         moveq #3,d5
         bra .quiet
 .menu_cancel:
@@ -270,6 +271,12 @@ edtr_receive_tile:
         beq.s .object_notice
         cmpi.w #EDTR_HELP,d2
         beq.s .object_notice
+        cmpi.w #OBJECT_NO_PARTS,d2
+        beq.s .object_notice
+        cmpi.w #OBJECT_NO_UNITS,d2
+        beq.s .object_notice
+        cmpi.w #OBJECT_NO_SQUAD,d2
+        beq.s .object_notice
         tst.w d2
         beq.s .object_terrain
         cmpi.w #6,d2
@@ -281,7 +288,7 @@ edtr_receive_tile:
 .object_action:
         move.w d2,d3
         subq.w #1,d3
-        cmpi.w #7,d3
+        cmpi.w #9,d3
         bhi edtr_receive_return
         cmpi.w #2,AUR_TOOL(a5)
         bne edtr_receive_return
@@ -317,6 +324,7 @@ edtr_receive_tile:
 .dirty_result:
         btst #1,AUR_FLAGS+1(a5)
         beq edtr_receive_return
+        bsr redo_clear
         bra.s .quiet
 .other:
         cmpi.w #EDTR_VISUAL_ERROR,d2
@@ -363,8 +371,8 @@ edtr_receive_tile:
         cmpi.w #398,d1
         bhi edtr_receive_return
         move.w d1,AUR_TILE(a5)
-        cmpi.w #2,AUR_TOOL(a5)
-        bne.s tile_receive_commit
+        cmpi.w #1,AUR_TOOL(a5)
+        bls.s tile_receive_commit
         clr.w AUR_TOOL(a5)
 tile_receive_commit:
         clr.l AUR_PAGE_KIND(a5)

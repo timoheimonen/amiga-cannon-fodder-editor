@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -21,10 +21,15 @@ terrain_input:
         clr.w native_left_pressed
         move.w native_right_pressed,d3
         clr.w native_right_pressed
-        ; A press ends the notice of a copy or a recall.
+        ; A press ends the notice of a copy, a recall or a save.
         move.w d5,d0
         or.w d3,d0
         beq.s .noticed
+        tst.w TERRAIN_SAVED_NOTICE
+        beq.s .noticed_block
+        clr.w TERRAIN_SAVED_NOTICE
+        ori.w #1,TERRAIN_BAR_DIRTY
+.noticed_block:
         tst.w TERRAIN_BLOCK_NOTICE
         beq.s .noticed
         clr.w TERRAIN_BLOCK_NOTICE
@@ -33,12 +38,20 @@ terrain_input:
         move.w native_last_key,d0
         clr.w native_last_key
         cmpi.w #$C5,d0
-        beq .menu
-        ; The Help key.
+        beq .escape
+        ; The Help key or H.
         cmpi.w #$DF,d0
         beq .help
+        cmpi.w #'H',d0
+        beq .help
+        cmpi.w #'M',d0
+        beq .overview
+        cmpi.w #'P',d0
+        beq .overlay
         cmpi.w #'U',d0
         beq .undo
+        cmpi.w #'Y',d0
+        beq .redo
         cmpi.w #'V',d0
         beq .recall
         cmpi.w #'T',d0
@@ -86,6 +99,7 @@ terrain_input:
         beq.s .selected
         cmpi.w #2,d0
         beq .large_area
+        bsr redo_clear
         bsr aur_mark_edited
         bsr render_view
         bsr terrain_objects
@@ -121,6 +135,7 @@ terrain_input:
         move.w d0,-(sp)
         moveq #-1,d0
         bsr bar_hover
+        bsr bar_press_cancel
         move.w (sp)+,d0
         move.w d0,d6
         lsr.w #4,d6
@@ -141,6 +156,12 @@ terrain_input:
 .cursor:
         move.w d0,TERRAIN_CURSOR_X
         move.w d2,TERRAIN_CURSOR_Y
+        tst.w TERRAIN_SAVED_NOTICE
+        beq.s .saved_done
+        subq.w #1,TERRAIN_SAVED_NOTICE
+        bne.s .saved_done
+        ori.w #1,TERRAIN_BAR_DIRTY
+.saved_done:
         tst.w TERRAIN_MARKER_HINT
         beq.s .hinted
         subq.w #1,TERRAIN_MARKER_HINT
@@ -161,7 +182,11 @@ terrain_input:
         add.w d2,d2
         move.w 0(a0,d2.w),d2
         cmpi.w #4,AUR_BASE+AUR_TOOL
-        beq .idle
+        bne.s .not_inspect
+        tst.w d3
+        bne .pick
+        bra .idle
+.not_inspect:
         cmpi.w #3,AUR_BASE+AUR_TOOL
         beq .marker
         tst.w AUR_BASE+AUR_TOOL
@@ -199,6 +224,7 @@ terrain_input:
         bsr block_stamp
         bmi .invalid
         beq .idle
+        bsr redo_clear
         bsr aur_mark_edited
         bsr render_view
         bsr terrain_objects
@@ -236,6 +262,7 @@ terrain_input:
         beq .large
         tst.w d0
         beq .idle
+        bsr redo_clear
         bsr aur_mark_edited
         bsr restore_item
         bsr paint_cell
@@ -321,6 +348,7 @@ terrain_input:
         bne .invalid
         bsr tu_end
         bmi .invalid
+        bsr redo_clear
         bsr aur_mark_edited
         bsr restore_item
         bsr paint_cell
@@ -350,8 +378,7 @@ terrain_input:
         bne.s .on_bar
         ori.w #1,TERRAIN_BAR_DIRTY
 .on_bar:
-        tst.w d5
-        beq .idle
+        bsr bar_press_step
         tst.w d0
         bmi .idle
         move.w d0,d1
@@ -397,6 +424,19 @@ terrain_input:
         bmi .invalid
         moveq #3,d0
         bra .return
+.escape:
+        tst.w TERRAIN_SELECT
+        beq.s .escape_block
+        clr.w TERRAIN_SELECT
+        move.w #1,TERRAIN_STROKE_BLOCK
+        ori.w #1,TERRAIN_BAR_DIRTY
+        bra .idle
+.escape_block:
+        tst.w TERRAIN_BLOCK_W
+        beq.s .menu
+        clr.l TERRAIN_BLOCK_W
+        ori.w #1,TERRAIN_BAR_DIRTY
+        bra .idle
 .menu:
         bsr terrain_end
         bmi .invalid
@@ -407,12 +447,26 @@ terrain_input:
         bmi .invalid
         moveq #12,d0
         bra .return
+.overview:
+        clr.w TERRAIN_SELECT
+        bsr terrain_end
+        bmi .invalid
+        bsr overview_show
+        bra .idle
+.overlay:
+        bsr terrain_end
+        bmi .invalid
+        eori.w #1,TERRAIN_OVERLAY
+        bsr render_view
+        bsr terrain_objects
+        ori.w #1,TERRAIN_BAR_DIRTY
+        bra .idle
 .undo:
         bsr terrain_end
-        bmi.s .invalid
+        bmi .invalid
         move.w #1,TERRAIN_STROKE_BLOCK
         tst.w AUR_BASE+AUR_UNDO_COUNT
-        beq.s .idle
+        beq .idle
         move.w AUR_BASE+AUR_UNDO_NEXT+PCREL(pc),d0
         subq.w #1,d0
         andi.w #255,d0
@@ -421,18 +475,40 @@ terrain_input:
         andi.w #$7FFF,d0
         cmpi.w #1,d0
         bne.s .object_page
+        bsr terrain_redo_capture
         bsr tu_undo
-        bmi.s .invalid
+        bmi .invalid
         tst.w d0
-        beq.s .idle
+        beq .idle
         bsr aur_mark_edited
         bsr render_view
-        bsr.s terrain_objects
+        bsr terrain_objects
         ori.w #1,TERRAIN_BAR_DIRTY
-        bra.s .idle
+        bra .idle
+.redo:
+        bsr terrain_end
+        bmi .invalid
+        move.w #1,TERRAIN_STROKE_BLOCK
+        moveq #UNDO_REDO_PEEK,d1
+        moveq #UNDO_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
+        tst.l d0
+        beq .idle
+        cmpi.w #1,d0
+        bne.s .object_redo
+        bsr terrain_redo_apply
+        bmi .invalid
+        beq .idle
+        bsr render_view
+        bsr terrain_objects
+        ori.w #1,TERRAIN_BAR_DIRTY
+        bra .idle
+.object_redo:
+        moveq #13,d0
+        bra .return
 .object_page:
         moveq #8,d0
-        bra.s .return
+        bra .return
 .large:
         clr.w AREA_PENDING
 .large_area:
@@ -444,6 +520,7 @@ terrain_input:
 .outside:
         moveq #-1,d0
         bsr bar_hover
+        bsr bar_press_cancel
 .idle:
         bsr block_frame_update
         tst.w TERRAIN_BAR_DIRTY
@@ -481,6 +558,96 @@ terrain_end:
         bsr tu_end
 .return:
         movem.l (sp)+,d1-d7/a0-a6
+        tst.w d0
+        rts
+
+; Clear the Slave Redo stack and any Test backup. Preserves all registers.
+redo_clear:
+        movem.l d0-d1,-(sp)
+        moveq #UNDO_REDO_CLEAR,d1
+        moveq #UNDO_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
+        movem.l (sp)+,d0-d1
+        rts
+
+; Push the newest terrain undo group onto the Slave Redo stack (swapping old
+; and new words so Redo restores new_word). Called with terrain_context active
+; immediately before tu_undo. Preserves all registers.
+terrain_redo_capture:
+        movem.l d0-d4/a0/a4,-(sp)
+        lea -16(sp),sp
+        move.w 2(a2),d3
+        beq.s .done
+        move.w (a2),d2
+        move.w #$8001,d4
+.rec:
+        subq.w #1,d2
+        andi.w #255,d2
+        move.w d2,d0
+        lsl.w #4,d0
+        lea 0(a1,d0.w),a4
+        move.w (a4),d0
+        andi.w #$7FFF,d0
+        cmpi.w #1,d0
+        bne.s .done
+        move.w d4,(sp)
+        move.w 2(a4),2(sp)
+        move.w 6(a4),4(sp)
+        move.w 4(a4),6(sp)
+        clr.l 8(sp)
+        clr.l 12(sp)
+        movea.l sp,a0
+        moveq #UNDO_REDO_PUSH,d1
+        moveq #UNDO_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
+        moveq #1,d4
+        tst.w (a4)
+        bmi.s .done
+        subq.w #1,d3
+        bne.s .rec
+.done:
+        lea 16(sp),sp
+        movem.l (sp)+,d0-d4/a0/a4
+        rts
+
+; Pop and apply the newest terrain group from the Slave Redo stack, recording
+; its undo group back onto EDITOR_UNDO_BASE. Caller provides terrain_context.
+; Returns D0.w = 1 applied, 0 empty, -1 error. Preserves other registers.
+terrain_redo_apply:
+        movem.l d1-d2/a0/a4,-(sp)
+        lea -16(sp),sp
+        bsr tu_begin
+        bmi.s .err
+        movea.l a0,a4               ; save editor_map_grid (safe: restored below)
+.loop:
+        movea.l sp,a0
+        moveq #UNDO_REDO_POP_ONE,d1
+        moveq #UNDO_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
+        tst.l d0
+        beq.s .end
+        movea.l a4,a0
+        move.w 2(sp),d1
+        move.w 4(sp),d2
+        bsr tu_change_checked
+        bmi.s .err_end
+        tst.w (sp)
+        bpl.s .loop
+.end:
+        movea.l a4,a0
+        bsr tu_end
+        bmi.s .err
+        bsr aur_mark_edited
+        moveq #1,d0
+        bra.s .out
+.err_end:
+        movea.l a4,a0
+        bsr tu_end
+.err:
+        moveq #-1,d0
+.out:
+        lea 16(sp),sp
+        movem.l (sp)+,d1-d2/a0/a4
         tst.w d0
         rts
 
@@ -529,6 +696,8 @@ bar_compose:
         bsr block_compose
         bne .phase
         lea bar_saved_text(pc),a1
+        tst.w TERRAIN_SAVED_NOTICE
+        bne .notice
         cmpi.w #-1,TERRAIN_CURSOR_X
         beq .notice
         cmpi.w #4,AUR_BASE+AUR_TOOL
@@ -560,6 +729,10 @@ bar_compose:
         bsr bar_digits
 .phase:
         bsr bar_append_phase
+        tst.w TERRAIN_OVERLAY
+        beq.s .done
+        lea bar_overlay_tag(pc),a1
+        bsr bar_append
         bra.s .done
 .inspect:
         bsr terrain_inspect_compose
@@ -615,13 +788,21 @@ MARKER_TILE     equ edtr_state_end
         endif
 marker_tile:
         cmpi.w #3,AUR_BASE+AUR_TOOL
-        bne block_frame_tile
-        rol.w #3,d1
-        andi.w #7,d1
+        bne.s .not_marker
+        move.w d1,d0
+        rol.w #3,d0
+        andi.w #7,d0
         bne.s .marked
-.plain:
+.not_marker:
+        tst.w TERRAIN_OVERLAY
+        beq.s .after_overlay
+        bsr overlay_tile
+.after_overlay:
+        cmpi.w #3,AUR_BASE+AUR_TOOL
+        bne block_frame_tile
         rts
 .marked:
+        move.w d0,d1
         movem.l d2-d6/a3,-(sp)
         ; The game's blitter copy of the previous marked cell may still run.
         btst #6,$DFF002
@@ -695,6 +876,82 @@ marker_digits:
         dc.b $1F,$01,$02,$04,$08,$08,$08
         even
 
+; View-only terrain-class overlay: non-Ground tiles get a 7x9 colour-0 badge
+; at top-left (x=1..7, y=1..9) with a 5x7 contrast-ink class letter inside.
+; A2 = tile graphics, D1.w = cell map word. Replaces A2 with MARKER_TILE on
+; non-Ground cells; leaves Ground and out-of-range tiles untouched.
+; Clobbers D0/D1/A0/A1; preserves D2-D7/A3-A6.
+overlay_tile:
+        andi.w #$1FF,d1
+        cmpi.w #400,d1
+        bhs .plain
+        add.w d1,d1
+        lea editor_hit_table,a0
+        move.w 0(a0,d1.w),d0
+        beq .plain
+        bmi.s .mixed
+        andi.w #15,d0
+        lea overlay_class_map(pc),a0
+        moveq #0,d1
+        move.b 0(a0,d0.w),d1
+        beq.s .plain
+        bra.s .draw
+.mixed:
+        moveq #7,d1
+.draw:
+        movem.l d2-d6/a3,-(sp)
+        btst #6,$DFF002
+.blitter:
+        btst #6,$DFF002
+        bne.s .blitter
+        mulu #7,d1
+        lea overlay_glyphs-7(pc),a3
+        adda.w d1,a3
+        lea MARKER_TILE,a1
+        moveq #0,d3
+.row:
+        moveq #0,d0
+        moveq #0,d2
+        cmpi.w #2,d3
+        blo.s .planes
+        cmpi.w #18,d3
+        bhi.s .planes
+        move.w #$7F00,d0
+        cmpi.w #4,d3
+        blo.s .planes
+        cmpi.w #16,d3
+        bhi.s .planes
+        move.b (a3)+,d2
+        lsl.w #8,d2
+        add.w d2,d2
+.planes:
+        bsr marker_planes
+        addq.w #2,d3
+        cmpi.w #32,d3
+        blo.s .row
+        movea.l a1,a2
+        movem.l (sp)+,d2-d6/a3
+.plain:
+        rts
+
+; Class 0..15 -> overlay glyph 1..8 (0 = plain Ground, skip):
+; 1=B(Blocked), 2=W(Water), 3=S(Shallows), 4=R(Rocks), 5=D(Drop/Pit),
+; 6=Q(Quicksand/Sinking), 7=M(Mixed), 8=+(Rough/Slippery/Slope/Ramp).
+overlay_class_map:
+        dc.b 0,4,4,1,6,3,2,8
+        dc.b 8,5,5,6,8,8,8,8
+overlay_glyphs:
+        dc.b $1E,$11,$11,$1E,$11,$11,$1E ; 1 B
+        dc.b $11,$11,$11,$15,$15,$1B,$11 ; 2 W
+        dc.b $0F,$10,$10,$0E,$01,$01,$1E ; 3 S
+        dc.b $1E,$11,$11,$1E,$14,$12,$11 ; 4 R
+        dc.b $1C,$12,$11,$11,$11,$12,$1C ; 5 D
+        dc.b $0E,$11,$11,$11,$15,$12,$0D ; 6 Q
+        dc.b $11,$1B,$15,$15,$11,$11,$11 ; 7 M
+        dc.b $00,$04,$04,$1F,$04,$04,$00 ; 8 +
+bar_overlay_tag: dc.b " [P]",0
+        even
+
 ; The selected tile (or the tile under the cursor for Marker and Inspect)
 ; and, for Inspect, the BHT mask of that tile. Preserves all registers.
 bar_band_extra:
@@ -703,9 +960,14 @@ bar_band_extra:
         move.w AUR_BASE+AUR_TILE,d0
         cmpi.w #3,AUR_BASE+AUR_TOOL
         blo.s .thumbnail
-        bsr.s terrain_marker_word
+        tst.w TERRAIN_CURSOR_X
+        bmi.s .thumbnail
+        bsr terrain_marker_word
         andi.l #$1FF,d0
 .thumbnail:
+        cmp.w BAR_THUMB_DRAWN,d0
+        beq.s .return
+        move.w d0,BAR_THUMB_DRAWN
         move.l d0,d7
         cmpi.w #399,d0
         bhs.s .return
@@ -717,6 +979,8 @@ bar_band_extra:
         jsr editor_tile_blit
         cmpi.w #4,AUR_BASE+AUR_TOOL
         bne.s .return
+        tst.w TERRAIN_CURSOR_X
+        bmi.s .return
         bsr inspect_mask
 .return:
         movem.l (sp)+,d0-d7/a0-a2

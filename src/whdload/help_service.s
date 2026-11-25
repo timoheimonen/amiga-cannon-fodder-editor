@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -87,7 +87,7 @@ help_tools_body:
         HELP_KEY 0,"F1 Paint"
         HELP_LINE 0,"Left: paint; drag for a stroke"
         HELP_LINE 1,"Right: pick up the tile"
-        HELP_LINE 2,"Shift + left drag: a rectangle"
+        HELP_LINE 2,"Shift+left: rectangle (Right/Esc)"
         HELP_LINE 3,"Shift + right drag: copy an area;"
         HELP_LINE 4,"a left press then stamps the copy"
         HELP_LINE 5,"V: stamp the last copy again"
@@ -98,7 +98,7 @@ help_tools_body:
         HELP_LINE 10,"Left: place, select or drag"
         HELP_LINE 11,"Right: pick up the type"
         HELP_LINE 12,"Del: delete the selected object"
-        HELP_LINE 13,"Tab: select the next object"
+        HELP_LINE 13,"Tab / B (Shift+Tab): next/prev"
         HELP_KEY 15,"F4 Marker"
         HELP_LINE 15,"Left: next class, 0 to 4"
         HELP_LINE 16,"Right: clear the marker"
@@ -115,37 +115,39 @@ help_keys:
         dc.w 206,HELP_BUTTON_Y,94,14,0,UI_NORMAL
         dc.l help_close_label-help_keys
 help_keys_body:
-        HELP_KEY 0,"T"
-        HELP_LINE 0,"Tile page"
-        HELP_KEY 1,"O"
-        HELP_LINE 1,"Object page"
-        HELP_KEY 2,"U"
-        HELP_LINE 2,"Undo"
-        HELP_KEY 3,"C"
-        HELP_LINE 3,"Check the mission"
-        HELP_KEY 4,"G"
-        HELP_LINE 4,"Test the phase"
-        HELP_KEY 5,"S"
-        HELP_LINE 5,"Save"
-        HELP_KEY 6,"Esc"
-        HELP_LINE 6,"Menu; closes a page or a dialog"
-        HELP_KEY 7,"Help"
-        HELP_LINE 7,"These pages"
-        HELP_KEY 8,"Arrow keys"
-        HELP_LINE 8,"Scroll the map one cell"
-        HELP_KEY 9,"F10"
-        HELP_LINE 9,"Quit the game"
-        HELP_WIDE 11,"The map also scrolls with the pointer at a"
-        HELP_WIDE 12,"screen edge; hold Shift for a screen at a time."
-        HELP_WIDE 14,"With the pointer on the tool bar, the Marker"
-        HELP_WIDE 15,"and Object tools show how much of the phase's"
-        HELP_WIDE 16,"limits is in use."
+        HELP_KEY 0,"T / O"
+        HELP_LINE 0,"Tile page / Object page"
+        HELP_KEY 1,"U / Y"
+        HELP_LINE 1,"Undo / Redo"
+        HELP_KEY 2,"C"
+        HELP_LINE 2,"Check the mission"
+        HELP_KEY 3,"G"
+        HELP_LINE 3,"Test the phase"
+        HELP_KEY 4,"S"
+        HELP_LINE 4,"Save"
+        HELP_KEY 5,"M"
+        HELP_LINE 5,"Overview map (click to jump)"
+        HELP_KEY 6,"P"
+        HELP_LINE 6,"Terrain-class overlay on map"
+        HELP_KEY 7,"Esc"
+        HELP_LINE 7,"Cancel drag/block; menu; close"
+        HELP_KEY 8,"Help, H"
+        HELP_LINE 8,"These pages"
+        HELP_KEY 9,"Arrow keys"
+        HELP_LINE 9,"Scroll the map one cell"
+        HELP_KEY 10,"F10"
+        HELP_LINE 10,"Quit the game"
+        HELP_WIDE 12,"The map also scrolls with the pointer at a"
+        HELP_WIDE 13,"screen edge; hold Shift for a screen at a time."
+        HELP_WIDE 15,"With the pointer on the tool bar, the Marker"
+        HELP_WIDE 16,"and Object tools show how much of the phase's"
+        HELP_WIDE 17,"limits is in use."
         dc.w UI_END
 
 help_tools_title:   dc.b "Help 1/2: tools",0
 help_keys_title:    dc.b "Help 2/2: keys",0
 help_keys_label:    dc.b "_Keys",0
 help_tools_label:   dc.b "_Tools",0
-help_close_label:   dc.b "Close",0
+help_close_label:   dc.b "_Close",0
         even
 help_descriptor:    dcb.b DIALOG_BUTTONS+HELP_BUTTONS*DIALOG_BUTTON_BYTES,0

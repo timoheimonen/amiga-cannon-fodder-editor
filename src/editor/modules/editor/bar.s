@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -21,7 +21,9 @@ BAR_DRAWN           equ EDITOR_UI_BASE+214
 ; Checksums of the texts on screen; unchanged texts are not redrawn.
 BAR_XY_SUM          equ EDITOR_UI_BASE+236
 BAR_INFO_SUM        equ EDITOR_UI_BASE+240
-BAR_STATE_END       equ EDITOR_UI_BASE+244
+BAR_THUMB_DRAWN     equ EDITOR_UI_BASE+244
+BAR_PRESSED         equ EDITOR_UI_BASE+246
+BAR_STATE_END       equ EDITOR_UI_BASE+248
         ifgt BAR_STATE_END-EDITOR_UI_BASE-EDITOR_UI_BYTES
         fail "Tool bar state exceeds UI scratch"
         endif
@@ -100,6 +102,57 @@ bar_hover:
 .same:
         rts
 
+; Release-triggered command buttons (BAR_UNDO..BAR_MENU): pressing captures
+; the button in BAR_PRESSED, moving off cancels it, releasing over the same
+; button returns its index in D0.w. Tool buttons (0..4) and the thumbnail act
+; on press. D0.w = current BAR_HOVER, D5.w = native_left_pressed.
+; Returns D0.w = activated button index or -1. Preserves other registers.
+bar_press_step:
+        move.w BAR_PRESSED,d1
+        bmi.s .idle
+        tst.w native_left_down
+        bne.s .none
+        move.w #-1,BAR_PRESSED
+        ori.w #8,TERRAIN_BAR_DIRTY
+        cmp.w BAR_HOVER,d1
+        bne.s .none
+        move.w d1,d0
+        rts
+.idle:
+        tst.w d5
+        beq.s .none
+        tst.w d0
+        bmi.s .none
+        cmpi.w #BAR_UNDO,d0
+        blo.s .act
+        cmpi.w #BAR_MENU,d0
+        bhi.s .act
+        move.w d0,d1
+        add.w d1,d1
+        move.l a0,-(sp)
+        lea BAR_STATES,a0
+        cmpi.w #UI_DISABLED,0(a0,d1.w)
+        movea.l (sp)+,a0
+        beq.s .none
+        move.w d0,BAR_PRESSED
+        ori.w #8,TERRAIN_BAR_DIRTY
+.none:
+        moveq #-1,d0
+.act:
+        rts
+
+; Cancel any held command button once the mouse button is released off the bar.
+; Preserves all registers.
+bar_press_cancel:
+        tst.w BAR_PRESSED
+        bmi.s .done
+        tst.w native_left_down
+        bne.s .done
+        move.w #-1,BAR_PRESSED
+        ori.w #8,TERRAIN_BAR_DIRTY
+.done:
+        rts
+
 ; D0.w button index, D1.w state. Preserves all registers.
 bar_set_state:
         movem.l d0/a0,-(sp)
@@ -119,6 +172,9 @@ bar_reset_states:
         cmp.w BAR_HOVER,d0
         bne.s .plain
         moveq #UI_HOVER,d1
+        cmp.w BAR_PRESSED,d0
+        bne.s .plain
+        moveq #UI_ACTIVE,d1
 .plain:
         cmp.w AUR_BASE+AUR_TOOL,d0
         bne.s .set
@@ -144,6 +200,8 @@ bar_prepare:
         dbra d1,.role
         clr.b BAR_ROLES+UI_BG
         move.w #-1,BAR_HOVER
+        move.w #-1,BAR_THUMB_DRAWN
+        move.w #-1,BAR_PRESSED
         moveq #0,d0
         bra.s .return
 .flat:
@@ -159,7 +217,7 @@ bar_prepare:
 ; The composer bar_compose fills the texts and button states. Preserves all.
 bar_draw:
         movem.l d0-d7/a0-a6,-(sp)
-        bsr.s bar_reset_states
+        bsr bar_reset_states
         bsr bar_compose
         move.w TERRAIN_BAR_DIRTY,d7
         btst #1,d7
@@ -212,11 +270,13 @@ bar_draw:
         btst #0,d7
         beq.s .done
         cmp.l BAR_INFO_SUM,d0
-        beq.s .done
+        beq.s .extra
         lea bar_info_list(pc),a0
 .info:
         move.l d0,BAR_INFO_SUM
         bsr.s bar_ui
+        move.w #-1,BAR_THUMB_DRAWN
+.extra:
         bsr bar_band_extra
 .done:
 bar_draw_end:

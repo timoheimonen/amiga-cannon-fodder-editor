@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -31,17 +31,18 @@ terrain_inspect_compose:
         move.w 0(a1,d3.w),d0
         moveq #3,d1
         bsr.s inspect_hex
-        lea inspect_class_text(pc),a1
-        bsr bar_append
+        move.b #' ',(a0)+
         move.w d4,d0
-        ror.w #4,d0
-        moveq #0,d1
-        bsr.s inspect_hex
+        bsr bar_class_by_id
+        bsr bar_append
+        tst.w d4
+        bpl.s .done
         move.b #'/',(a0)+
         move.w d4,d0
-        lsl.w #8,d0
-        moveq #0,d1
-        bsr.s inspect_hex
+        lsr.w #4,d0
+        bsr bar_class_by_id
+        bsr bar_append
+.done:
         clr.b (a0)
         bra.s .return
 .invalid:
@@ -100,8 +101,7 @@ inspect_mask:
         rts
 
 inspect_tile_text: dc.b "Tile ",0
-inspect_hit_text: dc.b " HIT ",0
-inspect_swp_text: dc.b " SWP ",0
-inspect_class_text: dc.b " Class ",0
+inspect_hit_text: dc.b " H",0
+inspect_swp_text: dc.b " S",0
 inspect_bad_text: dc.b " no attributes",0
         even

@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 ;
@@ -20,7 +20,7 @@ DIALOG_GUARD_FIELDS equ 20
 DIALOG_GUARD_MOVE   equ 4
 dialog_service:
         movem.l d1-d7/a0-a6,-(sp)
-        cmpi.w #DIALOG_HELP,d1
+        cmpi.w #DIALOG_OVERVIEW_POLL,d1
         bhi.s .refuse
         add.w d1,d1
         move.w .jump(pc,d1.w),d1
@@ -35,7 +35,7 @@ dialog_service:
 .jump:
         dc.w dialog_stamp-.jump,dialog_open-.jump,dialog_poll-.jump
         dc.w dialog_close-.jump,dialog_draw-.jump,dialog_set-.jump
-        dc.w dialog_help-.jump
+        dc.w dialog_help-.jump,dialog_overview-.jump,dialog_overview_poll-.jump
 
 ; A0=sixteen terrain colours, D2.w=ring byte offset of the first view row.
 dialog_stamp:
@@ -128,9 +128,13 @@ dialog_open:
         lea dlg_top(pc),a1
         move.w d3,(a1)+
         move.w DIALOG_HEIGHT(a4),(a1)+
-        move.w DIALOG_DEFAULT(a4),(a1)+
+        move.w DIALOG_DEFAULT(a4),d0
+        move.w d0,(a1)+
         move.w DIALOG_CANCEL(a4),(a1)+
         move.w d5,(a1)+
+        lea dlg_orig_default(pc),a1
+        move.w d0,(a1)+
+        clr.w (a1)
         lea DIALOG_BUTTONS(a4),a0
         lea dlg_buttons(pc),a1
         lea dlg_states(pc),a2
@@ -162,6 +166,7 @@ dialog_open:
 .button_next:
         cmp.w d5,d6
         blo.s .button
+        bsr dialog_open_focus
         ; A key released while WHDLoad ran the OS (directory listings) stays
         ; held for the game, which then ignores the next press of that key.
         ; Start every dialog with no key held and no pending event.
@@ -343,7 +348,12 @@ dialog_draw_button:
 .button:
         move.l DIALOG_BUTTON_X(a1),(a0)+
         move.l DIALOG_BUTTON_W(a1),(a0)+
-        move.w DIALOG_BUTTON_STATE(a1),(a0)+
+        move.w DIALOG_BUTTON_STATE(a1),d0
+        btst #DIALOG_ERROR_BIT-8,0(a2,d7.w)
+        beq.s .state_done
+        ori.w #UI_ROW_ERROR,d0
+.state_done:
+        move.w d0,(a0)+
         move.l DIALOG_BUTTON_LABEL(a1),(a0)+
         clr.w (a0)
         lea dlg_list(pc),a0
@@ -835,9 +845,9 @@ dialog_key:
 dialog_focus_move:
         movem.l d0-d7/a1-a3,-(sp)
         move.w dlg_default(pc),d7
-        bmi.s .first
+        bmi .first
         bsr dialog_focusable
-        bne.s .first
+        bne .first
         bsr dialog_button
         bsr dialog_centre
         move.w d2,d4
@@ -887,6 +897,8 @@ dialog_focus_move:
         blo.s .candidate
         move.w a3,d7
         bmi.s .out
+        lea dlg_user_moved(pc),a2
+        move.w #1,(a2)
         bsr.s dialog_focus_set
 .out:
         movem.l (sp)+,d0-d7/a1-a3
@@ -901,6 +913,8 @@ dialog_focus_move:
         addq.w #1,d7
         bra.s .find
 .take:
+        lea dlg_user_moved(pc),a2
+        move.w #1,(a2)
         bsr.s dialog_focus_set
         bra.s .out
 
@@ -1055,16 +1069,36 @@ dialog_unframed:
 dialog_set:
         moveq #10,d0
         move.w dlg_open(pc),d1
-        beq.s .out
+        beq .out
         cmp.w dlg_count(pc),d2
-        bhs.s .out
+        bhs .out
         move.w d2,d7
         bsr dialog_button
+        moveq #0,d6
+        lea dlg_flags(pc),a2
+        btst #DIALOG_ROW_BIT-8,0(a2,d7.w)
+        beq.s .check_label
+        moveq #1,d6                 ; list rows may mutate label text in place
+.check_label:
         move.l a0,d0
         beq.s .label
+        cmp.l DIALOG_BUTTON_LABEL(a1),a0
+        beq.s .label
         move.l a0,DIALOG_BUTTON_LABEL(a1)
+        moveq #1,d6
 .label:
+        move.b 0(a2,d7.w),d4
+        bclr #DIALOG_ERROR_BIT-8,0(a2,d7.w)
+        btst #DIALOG_ERROR_BIT,d3
+        beq.s .no_err
+        bset #DIALOG_ERROR_BIT-8,0(a2,d7.w)
+.no_err:
+        cmp.b 0(a2,d7.w),d4
+        beq.s .err_same
+        moveq #1,d6
+.err_same:
         move.w d3,d0
+        andi.w #$FF,d0
         cmp.w dlg_default(pc),d7
         bne.s .base
         bsr dialog_framed
@@ -1087,10 +1121,101 @@ dialog_set:
         bsr dialog_visual
         move.w d0,d1
         bsr dialog_button
+        cmp.w DIALOG_BUTTON_STATE(a1),d1
+        beq.s .maybe_draw
         move.w d1,DIALOG_BUTTON_STATE(a1)
+        moveq #1,d6
+.maybe_draw:
+        tst.w d6
+        beq.s .sync
         bsr dialog_draw_button
+.sync:
+        bsr.s dialog_sync_focus
         moveq #0,d0
 .out:
+        rts
+
+; Before the panel is drawn: if the default button is disabled, move the
+; frame to a safe focusable fallback button (Cancel/Close/Back first).
+dialog_open_focus:
+        movem.l d0/d7/a1-a2,-(sp)
+        move.w dlg_default(pc),d7
+        bmi.s .done
+        bsr dialog_focusable
+        beq.s .done
+        bsr.s dialog_fallback_button
+        bmi.s .done
+        lea dlg_default(pc),a2
+        move.w d7,(a2)
+        bsr dialog_state_word
+        move.w (a2),d0
+        bsr dialog_framed
+        move.w d0,(a2)
+        bsr dialog_button
+        move.w d0,DIALOG_BUTTON_STATE(a1)
+.done:
+        movem.l (sp)+,d0/d7/a1-a2
+        rts
+
+; After dialog_set: restore the descriptor's default once it is enabled again
+; (unless the user moved focus with cursor keys), or move to a fallback when
+; the currently framed button was disabled.
+dialog_sync_focus:
+        movem.l d0/d7/a1-a2,-(sp)
+        move.w dlg_user_moved(pc),d0
+        bne.s .check_current
+        move.w dlg_orig_default(pc),d7
+        bmi.s .check_current
+        bsr dialog_focusable
+        bne.s .check_current
+        cmp.w dlg_default(pc),d7
+        beq.s .done
+        bsr dialog_focus_set
+        bra.s .done
+.check_current:
+        move.w dlg_default(pc),d7
+        bmi.s .done
+        bsr dialog_focusable
+        beq.s .done
+        bsr.s dialog_fallback_button
+        bmi.s .done
+        bsr dialog_focus_set
+.done:
+        movem.l (sp)+,d0/d7/a1-a2
+        rts
+
+; D7.w = safe focusable fallback button index (prefers the button whose code
+; matches dlg_cancel, otherwise the last focusable button), or -1.
+dialog_fallback_button:
+        movem.l d0-d1/a1,-(sp)
+        move.w dlg_cancel(pc),d1
+        bmi.s .scan_last
+        moveq #0,d7
+        lea dlg_buttons(pc),a1
+.cancel_loop:
+        cmp.w dlg_count(pc),d7
+        bhs.s .scan_last
+        bsr dialog_focusable
+        bne.s .cancel_next
+        cmp.w DIALOG_BUTTON_CODE(a1),d1
+        beq.s .found
+.cancel_next:
+        lea DIALOG_BUTTON_BYTES(a1),a1
+        addq.w #1,d7
+        bra.s .cancel_loop
+.scan_last:
+        move.w dlg_count(pc),d7
+.last_loop:
+        subq.w #1,d7
+        bmi.s .none
+        bsr dialog_focusable
+        bne.s .last_loop
+        bra.s .found
+.none:
+        moveq #-1,d7
+.found:
+        movem.l (sp)+,d0-d1/a1
+        tst.w d7
         rts
 
 dialog_close:
@@ -1187,6 +1312,8 @@ dlg_height:         dc.w 0
 dlg_default:        dc.w 0
 dlg_cancel:         dc.w 0
 dlg_count:          dc.w 0
+dlg_orig_default:   dc.w 0
+dlg_user_moved:     dc.w 0
 dlg_hover:          dc.w 0
 dlg_held:           dc.w 0
 dlg_right_held:     dc.w 0

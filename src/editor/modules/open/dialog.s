@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -315,9 +315,9 @@ dlg_open:
         dc.l OPEN_ROW_TEXT+2*OPEN_ROW_BYTES
         dc.w 8,129,292,12,OPEN_ROW+3,UI_NORMAL|DIALOG_ROW
         dc.l OPEN_ROW_TEXT+3*OPEN_ROW_BYTES
-        dc.w 8,144,34,14,OPEN_UP,UI_NORMAL
+        dc.w 8,144,34,14,OPEN_UP,UI_NORMAL|DIALOG_REPEAT
         dc.l open_up_label
-        dc.w 44,144,34,14,OPEN_DOWN,UI_NORMAL
+        dc.w 44,144,34,14,OPEN_DOWN,UI_NORMAL|DIALOG_REPEAT
         dc.l open_down_label
         dc.w 80,144,52,14,4,UI_NORMAL
         dc.l open_new_label

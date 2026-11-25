@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -192,5 +192,65 @@ scroll_clamp:
         bls.s .inside
         move.w d7,d1
 .inside:
+        rts
+
+; Show the Slave's Overview minimap dialog (M key). Clicking on the minimap
+; jumps the camera there and repaints; Esc/M/Close leaves the camera intact.
+overview_show:
+        movem.l d0-d3/d6-d7/a0,-(sp)
+        ifd AUR_OBJECT_VIEW
+        bsr restore_item
+        endif
+        lea editor_base_palette,a0
+        move.w ring_base,d2
+        moveq #DIALOG_STAMP,d1
+        moveq #DIALOG_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
+        move.w view_origin_x,d2
+        move.w view_origin_y,d3
+        moveq #DIALOG_OVERVIEW,d1
+        moveq #DIALOG_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
+        bne .done
+.poll:
+        jsr wait_frame
+        jsr editor_pointer_update
+        moveq #DIALOG_OVERVIEW_POLL,d1
+        moveq #DIALOG_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
+        bmi.s .poll
+        move.l d0,d2
+        moveq #DIALOG_CLOSE,d1
+        moveq #DIALOG_OPERATION,d0
+        jsr EDITOR_BACKEND_ENTRY
+.drain:
+        clr.w native_last_key
+        clr.w native_left_pressed
+        clr.w native_right_pressed
+        jsr wait_frame
+        jsr editor_pointer_update
+        tst.w native_left_down
+        bne.s .drain
+        tst.w native_right_down
+        bne.s .drain
+        clr.w native_last_key
+        clr.w native_left_pressed
+        clr.w native_right_pressed
+        bsr terrain_scroll_enter
+        tst.l d2
+        beq.s .redraw_bar
+        move.w d2,d1
+        swap d2
+        andi.w #$3FFF,d2
+        move.w d2,d0
+        bsr scroll_clamp
+        bsr set_camera
+        bne.s .redraw_bar
+        bsr render_view
+        bsr terrain_objects
+.redraw_bar:
+        ori.w #3,TERRAIN_BAR_DIRTY
+.done:
+        movem.l (sp)+,d0-d3/d6-d7/a0
         rts
 terrain_scroll_end:

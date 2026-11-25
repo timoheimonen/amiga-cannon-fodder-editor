@@ -1,4 +1,4 @@
-; Cannon Fodder In-Game Level Editor V1.2.5
+; Cannon Fodder In-Game Level Editor V1.2.6
 ; Copyright (c) 2026 Timo Heimonen <timo.heimonen@proton.me>
 ; Licensed under the MIT License. See the LICENSE file for details.
 
@@ -16,6 +16,7 @@
         include "save.i"
         include "authoring.i"
         include "authoring_recovery.i"
+VIEW_STATE_BASE equ EDITOR_MODULE_BASE+EDITOR_MAP_VIEW_BYTES
         include "state.i"
         include "dialog.i"
 STORAGE_INSPECT_ONLY equ 1
@@ -81,6 +82,6 @@ object_view_end:
         ifgt edtr_validation_end-EDITOR_SERIAL_WORK_BASE-EDITOR_SERIAL_WORK_BYTES
         fail "Object validation exceeds serial working scratch"
         endif
-        ifgt object_view_end-object_view_start-EDITOR_SERIALIZER_BYTES
-        fail "Object view exceeds installable 16 KiB"
+        ifgt object_view_end-object_view_start-EDITOR_MAP_VIEW_BYTES
+        fail "Object view exceeds installable 20 KiB"
         endif
